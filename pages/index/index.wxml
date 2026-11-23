@@ -1,0 +1,65 @@
+<view class="page">
+  <view class="card">
+    <view class="row">
+      <view>
+        <view class="title">今日关卡</view>
+        <view class="muted">{{date}}</view>
+      </view>
+      <view class="streak">
+        <view class="streak-num">{{streak.current}}</view>
+        <view class="muted">连续天数</view>
+      </view>
+    </view>
+
+    <view class="filters">
+      <picker mode="selector" range="{{langLabels}}" value="{{langIndex}}" bindchange="onLangChange">
+        <view class="picker">{{langLabels[langIndex]}}</view>
+      </picker>
+      <picker mode="selector" range="{{levels}}" value="{{levelIndex}}" bindchange="onLevelChange">
+        <view class="picker">{{level}}</view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{loading}}">
+    <view class="muted">加载中…</view>
+  </view>
+
+  <view class="card" wx:elif="{{error}}">
+    <view class="error">{{error}}</view>
+    <button class="btn-primary" bindtap="retry">重试</button>
+  </view>
+
+  <view class="card" wx:elif="{{!challenge}}">
+    <view class="empty-title">今天还没有关卡</view>
+    <view class="muted">{{reason === 'content_not_ready' ? '素材准备中，请稍后再来。' : '管理员尚未发布今天的关卡。'}}</view>
+  </view>
+
+  <view class="card" wx:else>
+    <view class="challenge-title">{{challenge.title}}</view>
+    <view class="muted">{{challenge.items.length}} 道题 · 答对 80% 即打卡成功</view>
+
+    <view class="done" wx:if="{{attempt}}">
+      <view class="score">{{attempt.score}} / {{attempt.total}}</view>
+      <view class="{{attempt.passed ? 'pass' : 'fail'}}">{{attempt.passed ? '已打卡' : '未通过，明天继续'}}</view>
+    </view>
+    <button wx:else class="btn-primary" bindtap="startChallenge">开始答题</button>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <view class="section-title">打卡日历</view>
+      <view class="muted">{{monthLabel}}</view>
+    </view>
+    <view class="calendar">
+      <view class="weekday" wx:for="{{weekdays}}" wx:key="*this">{{item}}</view>
+      <view
+        wx:for="{{cells}}"
+        wx:key="key"
+        class="cell {{item.passed ? 'cell-passed' : ''}} {{item.day ? '' : 'cell-blank'}}"
+      >
+        <view class="cell-inner">{{item.day}}</view>
+      </view>
+    </view>
+  </view>
+</view>

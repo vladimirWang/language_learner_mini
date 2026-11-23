@@ -1,0 +1,69 @@
+.page {
+  padding-bottom: 40rpx;
+}
+
+.summary {
+  text-align: center;
+}
+
+.empty-state {
+  text-align: center;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.score {
+  font-size: 72rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.badge {
+  display: inline-block;
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  margin: 16rpx 0 20rpx;
+}
+
+.badge-pass {
+  background: #f6ffed;
+  color: #389e0d;
+}
+
+.badge-fail {
+  background: #fff1f0;
+  color: #cf1322;
+}
+
+.pass {
+  color: #389e0d;
+}
+
+.fail {
+  color: #cf1322;
+}
+
+.q-index {
+  font-weight: 600;
+  color: #1677ff;
+}
+
+.correct-answer {
+  margin-top: 12rpx;
+  font-size: 30rpx;
+}
+
+.explanation {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+.footer {
+  padding: 0 24rpx;
+}

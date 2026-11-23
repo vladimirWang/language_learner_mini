@@ -1,0 +1,43 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/challenge/challenge",
+    "pages/result/result",
+    "pages/test/test",
+    "pages/mine/mine"
+  ],
+  "window": {
+    "navigationBarTitleText": "每日关卡",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f6f7f9"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#1677ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "关卡",
+        "iconPath": "assets/tabbar/level.png",
+        "selectedIconPath": "assets/tabbar/level-active.png"
+      },
+      {
+        "pagePath": "pages/test/test",
+        "text": "测试",
+        "iconPath": "assets/tabbar/test.png",
+        "selectedIconPath": "assets/tabbar/test-active.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "assets/tabbar/mine.png",
+        "selectedIconPath": "assets/tabbar/mine-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,42 @@
+<view class="page">
+  <view class="card" wx:if="{{loading}}">
+    <view class="muted">加载中…</view>
+  </view>
+
+  <view class="card" wx:elif="{{error}}">
+    <view class="error">{{error}}</view>
+    <button class="btn-primary" bindtap="retry">重试</button>
+  </view>
+
+  <block wx:elif="{{challenge}}">
+    <view class="card head">
+      <view class="title">{{challenge.title}}</view>
+      <view class="muted">共 {{items.length}} 题 · 答对 80% 即打卡成功</view>
+      <view class="done-tip" wx:if="{{attempt}}">今天已作答，本次提交不会覆盖首次成绩。</view>
+    </view>
+
+    <view class="card" wx:for="{{items}}" wx:key="seq">
+      <view class="q-head">
+        <view class="q-index">第 {{item.seq}} 题</view>
+        <view class="q-kind">{{item.kind === 'word' ? '单词' : item.kind === 'collocation' ? '固定搭配' : '语法'}}</view>
+      </view>
+      <view class="q-title">{{item.prompt.question}}</view>
+      <view
+        wx:for="{{item.prompt.options}}"
+        wx:for-item="option"
+        wx:for-index="optIndex"
+        wx:key="*this"
+        data-seq="{{item.seq}}"
+        data-index="{{optIndex}}"
+        bindtap="onSelect"
+        class="option {{item.selectedIndex === optIndex ? 'option-active' : ''}}"
+      >
+        {{option}}
+      </view>
+    </view>
+
+    <view class="footer">
+      <button class="btn-primary" loading="{{submitting}}" bindtap="submit">提交答案</button>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,66 @@
+.page {
+  padding-bottom: 40rpx;
+}
+
+.head {
+  padding-bottom: 24rpx;
+}
+
+.title {
+  font-size: 36rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.done-tip {
+  margin-top: 12rpx;
+  color: #ad6800;
+  font-size: 24rpx;
+}
+
+.q-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.q-index {
+  font-size: 26rpx;
+  color: #1677ff;
+  font-weight: 600;
+}
+
+.q-kind {
+  font-size: 24rpx;
+  color: #8a919f;
+}
+
+.q-title {
+  font-size: 32rpx;
+  line-height: 1.5;
+  margin-bottom: 20rpx;
+}
+
+.option {
+  padding: 20rpx 24rpx;
+  border: 1px solid #e5e6eb;
+  border-radius: 14rpx;
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+  line-height: 1.4;
+}
+
+.option-active {
+  border-color: #1677ff;
+  background: #eef5ff;
+  color: #0958d9;
+}
+
+.footer {
+  padding: 0 24rpx;
+}
+
+.error {
+  color: #d4380d;
+  margin-bottom: 16rpx;
+}

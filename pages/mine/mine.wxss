@@ -1,0 +1,87 @@
+.profile {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.avatar {
+  width: 110rpx;
+  height: 110rpx;
+  border-radius: 50%;
+  background: #eef5ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56rpx;
+  margin-right: 24rpx;
+}
+
+.profile-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-size: 36rpx;
+  font-weight: 600;
+  margin-bottom: 6rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 20rpx;
+}
+
+.info-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+
+.info-value {
+  font-size: 28rpx;
+  color: #1f2329;
+}
+
+.tip {
+  margin-top: 18rpx;
+  font-size: 24rpx;
+}
+
+.streak-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.streak-block {
+  flex: 1;
+  text-align: center;
+}
+
+.streak-num {
+  font-size: 60rpx;
+  font-weight: 700;
+  color: #1677ff;
+  line-height: 1.2;
+}
+
+.last-day {
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  text-align: center;
+}
+
+.footer {
+  padding: 0 24rpx 40rpx;
+}
+
+.btn-reset {
+  background: #fff1f0;
+  color: #cf1322;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+}

@@ -1,0 +1,35 @@
+page {
+  background: #f6f7f9;
+  color: #1f2329;
+  font-size: 28rpx;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  margin: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+}
+
+.btn-primary {
+  background: #1677ff;
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+}
+
+.btn-primary[disabled] {
+  background: #b9d4ff;
+  color: #fff;
+}
+
+.muted {
+  color: #8a919f;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

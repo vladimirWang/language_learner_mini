@@ -1,0 +1,41 @@
+<view class="page">
+  <view class="card profile">
+    <view class="avatar">👤</view>
+    <view class="profile-main">
+      <view class="name">{{loggedIn ? '学习者' : '未登录'}}</view>
+      <view class="muted">{{loggedIn ? '已开启打卡' : '进入关卡将自动登录'}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">学习偏好</view>
+    <view class="info-row">
+      <text class="muted">语种</text>
+      <text class="info-value">{{langLabel}}</text>
+    </view>
+    <view class="info-row">
+      <text class="muted">等级</text>
+      <text class="info-value">{{level}}</text>
+    </view>
+    <view class="muted tip">在「关卡」页顶部可切换语种与等级</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">打卡记录</view>
+    <view class="streak-row">
+      <view class="streak-block">
+        <view class="streak-num">{{streak.current}}</view>
+        <view class="muted">当前连续（天）</view>
+      </view>
+      <view class="streak-block">
+        <view class="streak-num">{{streak.longest}}</view>
+        <view class="muted">最长连续（天）</view>
+      </view>
+    </view>
+    <view class="muted last-day" wx:if="{{streak.last_day}}">最近打卡：{{streak.last_day}}</view>
+  </view>
+
+  <view class="footer">
+    <button class="btn-reset" bindtap="onReset">重置进度</button>
+  </view>
+</view>

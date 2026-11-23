@@ -1,0 +1,20 @@
+{
+  "description": "每日关卡小程序",
+  "appid": "wx035b66b5464d3063",
+  "projectname": "language_learner_mini",
+  "compileType": "miniprogram",
+  "libVersion": "3.0.0",
+  "packOptions": {
+    "ignore": [
+      { "type": "folder", "value": "tests" }
+    ],
+    "include": []
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true
+  }
+}

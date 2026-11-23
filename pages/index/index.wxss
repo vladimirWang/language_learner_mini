@@ -1,0 +1,114 @@
+.page {
+  padding-bottom: 40rpx;
+}
+
+.title {
+  font-size: 40rpx;
+  font-weight: 600;
+}
+
+.streak {
+  text-align: right;
+}
+
+.streak-num {
+  font-size: 52rpx;
+  font-weight: 700;
+  color: #1677ff;
+  line-height: 1.1;
+}
+
+.filters {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.picker {
+  padding: 10rpx 24rpx;
+  background: #f2f3f5;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+}
+
+.challenge-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.btn-primary {
+  margin-top: 24rpx;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.error {
+  color: #d4380d;
+  margin-bottom: 16rpx;
+}
+
+.done {
+  margin-top: 24rpx;
+}
+
+.score {
+  font-size: 48rpx;
+  font-weight: 700;
+}
+
+.pass {
+  color: #389e0d;
+}
+
+.fail {
+  color: #d4380d;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.calendar {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.weekday {
+  width: 14.28%;
+  text-align: center;
+  color: #8a919f;
+  font-size: 22rpx;
+  padding: 8rpx 0;
+}
+
+.cell {
+  width: 14.28%;
+  display: flex;
+  justify-content: center;
+  padding: 8rpx 0;
+}
+
+.cell-inner {
+  width: 52rpx;
+  height: 52rpx;
+  line-height: 52rpx;
+  border-radius: 50%;
+  text-align: center;
+  font-size: 24rpx;
+}
+
+.cell-blank .cell-inner {
+  color: transparent;
+}
+
+.cell-passed .cell-inner {
+  background: #52c41a;
+  color: #fff;
+}
