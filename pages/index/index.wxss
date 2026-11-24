@@ -61,6 +61,12 @@
   font-weight: 700;
 }
 
+.stars {
+  margin: 8rpx 0;
+  color: #ad6800;
+  font-size: 28rpx;
+}
+
 .pass {
   color: #389e0d;
 }

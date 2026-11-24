@@ -1,10 +1,22 @@
 <view class="page">
-  <view class="card profile">
-    <view class="avatar">👤</view>
-    <view class="profile-main">
-      <view class="name">{{loggedIn ? '学习者' : '未登录'}}</view>
-      <view class="muted">{{loggedIn ? '已开启打卡' : '进入关卡将自动登录'}}</view>
+  <view class="card">
+    <view class="profile">
+      <button class="avatar-button" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar" disabled="{{!loggedIn}}" aria-label="选择微信头像">
+        <image wx:if="{{avatarPreview}}" class="avatar" src="{{avatarPreview}}" mode="aspectFill" />
+        <view wx:else class="avatar avatar-default">微</view>
+      </button>
+      <view class="profile-main">
+        <input wx:if="{{loggedIn}}" class="name name-input" type="nickname" value="{{draftNickname}}" placeholder="微信用户" maxlength="64" bindinput="onNicknameInput" />
+        <view wx:else class="name">未登录</view>
+        <view class="muted">{{loggedIn ? nickname : '进入关卡将自动登录'}}</view>
+      </view>
+      <view class="total-stars">
+        <view class="star-number">{{totalStars}}</view>
+        <view class="muted">累计星星</view>
+      </view>
     </view>
+    <button wx:if="{{loggedIn}}" class="btn-save" loading="{{saving}}" disabled="{{saving}}" bindtap="onSaveProfile">保存头像与昵称</button>
+    <view class="muted tip" wx:if="{{loadError}}">{{loadError}}</view>
   </view>
 
   <view class="card">

@@ -104,17 +104,17 @@ Page({
     const first = new Date(year, monthIndex, 1)
     const days = new Date(year, monthIndex + 1, 0).getDate()
     const offset = (first.getDay() + 6) % 7
-    const passed = {}
+    const checkedIn = {}
     entries.forEach((entry) => {
-      passed[entry.day] = entry.passed
+      checkedIn[entry.day] = entry.checked_in === true || entry.passed === true
     })
     const cells = []
     for (let i = 0; i < offset; i += 1) {
-      cells.push({ key: 'blank-' + i, day: '', passed: false })
+      cells.push({ key: 'blank-' + i, day: '', checkedIn: false })
     }
     for (let d = 1; d <= days; d += 1) {
       const key = year + '-' + String(monthIndex + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0')
-      cells.push({ key, day: String(d), passed: passed[key] === true })
+      cells.push({ key, day: String(d), checkedIn: checkedIn[key] === true })
     }
     return cells
   },

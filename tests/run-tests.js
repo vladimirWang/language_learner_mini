@@ -18,9 +18,11 @@ function atest(name, fn) { asyncTests.push({ name, fn }) }
 // ---- mock wx 运行时 ----
 const store = {}
 let requestQueue = []   // 每次 wx.request 按序取出一个响应脚本
+let uploadQueue = []    // 每次 wx.uploadFile 按序取出一个响应脚本
 let loginCode = 'mock-code'
 let loginCalls = 0
 let capturedRequests = []
+let capturedUploads = []
 
 global.wx = {
   getStorageSync(k) { return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : '' },
@@ -40,7 +42,20 @@ global.wx = {
         opts.success && opts.success({ statusCode: script.statusCode, data: script.data })
       }
     }, 0)
-  }
+  },
+  uploadFile(opts) {
+    capturedUploads.push(opts)
+    const script = uploadQueue.shift() || { statusCode: 200, data: '{}' }
+    setTimeout(() => {
+      if (script.fail) {
+        opts.fail && opts.fail({ errMsg: script.fail })
+      } else {
+        opts.success && opts.success({ statusCode: script.statusCode, data: script.data })
+      }
+    }, 0)
+  },
+  showToast() {},
+  showModal() {}
 }
 
 const api = require('../utils/api.js')
@@ -48,8 +63,10 @@ const api = require('../utils/api.js')
 function reset() {
   Object.keys(store).forEach((k) => delete store[k])
   requestQueue = []
+  uploadQueue = []
   loginCalls = 0
   capturedRequests = []
+  capturedUploads = []
 }
 
 // ---- 同步用例 ----
@@ -164,6 +181,120 @@ atest('网络失败：fail 回调映射为 Error', async () => {
   try { await api.request('/api/x') } catch (e) { err = e }
   assert.ok(err)
   assert.strictEqual(err.message, 'request:fail timeout')
+})
+
+atest('getMe / updateNickname 使用资料接口并携带修改内容', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_PROFILE')
+  requestQueue.push({ statusCode: 200, data: { user: { nickname: '微信用户', total_stars: 7 } } })
+  const me = await api.getMe()
+  assert.strictEqual(me.user.total_stars, 7)
+  assert.strictEqual(capturedRequests[0].url, api.BASE_URL + '/api/auth/wx-me')
+  assert.strictEqual(capturedRequests[0].header.Authorization, 'Bearer TOKEN_PROFILE')
+
+  requestQueue.push({ statusCode: 200, data: { user: { nickname: '新昵称' } } })
+  await api.updateNickname('新昵称')
+  assert.strictEqual(capturedRequests[1].method, 'PUT')
+  assert.strictEqual(capturedRequests[1].url, api.BASE_URL + '/api/auth/wx-profile')
+  assert.deepStrictEqual(capturedRequests[1].data, { nickname: '新昵称' })
+})
+
+atest('uploadAvatar：multipart 字段、Bearer、10 秒超时及 JSON 解析', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_UPLOAD')
+  uploadQueue.push({ statusCode: 200, data: JSON.stringify({ user: { avatar: 'https://signed/avatar.jpg' } }) })
+  const data = await api.uploadAvatar('/tmp/avatar.jpg')
+  assert.strictEqual(data.user.avatar, 'https://signed/avatar.jpg')
+  assert.strictEqual(capturedUploads.length, 1)
+  assert.strictEqual(capturedUploads[0].name, 'avatar')
+  assert.strictEqual(capturedUploads[0].filePath, '/tmp/avatar.jpg')
+  assert.strictEqual(capturedUploads[0].header.Authorization, 'Bearer TOKEN_UPLOAD')
+  assert.strictEqual(capturedUploads[0].timeout, 10000)
+})
+
+atest('uploadAvatar：401 重登后仅重试一次', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'OLD_UPLOAD')
+  uploadQueue.push({ statusCode: 401, data: JSON.stringify({ error: 'login expired' }) })
+  requestQueue.push({ statusCode: 200, data: { token: 'FRESH_UPLOAD' } })
+  uploadQueue.push({ statusCode: 200, data: JSON.stringify({ user: { avatar: 'ok' } }) })
+  const data = await api.uploadAvatar('/tmp/avatar.png')
+  assert.strictEqual(data.user.avatar, 'ok')
+  assert.strictEqual(loginCalls, 1)
+  assert.strictEqual(capturedUploads.length, 2)
+  assert.strictEqual(capturedUploads[1].header.Authorization, 'Bearer FRESH_UPLOAD')
+})
+
+atest('uploadAvatar：503 和网络错误不重试', async () => {
+  reset()
+  uploadQueue.push({ statusCode: 503, data: JSON.stringify({ error: 'avatar storage not configured' }) })
+  let unavailable = null
+  try { await api.uploadAvatar('/tmp/avatar.webp') } catch (e) { unavailable = e }
+  assert.strictEqual(unavailable.message, '服务暂未开放')
+  assert.strictEqual(capturedUploads.length, 1)
+  assert.strictEqual(loginCalls, 0)
+
+  uploadQueue.push({ fail: 'uploadFile:fail timeout' })
+  let network = null
+  try { await api.uploadAvatar('/tmp/avatar.webp') } catch (e) { network = e }
+  assert.strictEqual(network.message, 'uploadFile:fail timeout')
+  assert.strictEqual(capturedUploads.length, 2)
+})
+
+atest('答题页进入时恢复最近一次已选答案', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_CHALLENGE')
+  const pagePath = require.resolve('../pages/challenge/challenge.js')
+  delete require.cache[pagePath]
+  let definition = null
+  global.Page = (value) => { definition = value }
+  require(pagePath)
+  delete global.Page
+  const page = {
+    data: JSON.parse(JSON.stringify(definition.data)),
+    setData(update) { this.data = Object.assign({}, this.data, update) }
+  }
+  page.data.lang = 'de'
+  page.data.level = 'A1'
+  requestQueue.push({
+    statusCode: 200,
+    data: {
+      challenge: {
+        id: 9,
+        day: '2026-11-24',
+        items: [
+          { seq: 1, kind: 'word', prompt: { options: ['A', 'B'] } },
+          { seq: 2, kind: 'grammar', prompt: { options: ['C', 'D'] } }
+        ]
+      },
+      attempt: { answers: [{ seq: 2, value: 'D' }], stars: 0, best_stars: 2 }
+    }
+  })
+  await definition.load.call(page, '2026-11-24')
+  assert.strictEqual(page.data.items[0].selectedIndex, -1)
+  assert.strictEqual(page.data.items[0].selected, '')
+  assert.strictEqual(page.data.items[1].selectedIndex, 1)
+  assert.strictEqual(page.data.items[1].selected, 'D')
+  assert.strictEqual(page.data.attempt.best_stars, 2)
+})
+
+atest('首页日历优先 checked_in，并兼容旧 passed 字段', () => {
+  const pagePath = require.resolve('../pages/index/index.js')
+  delete require.cache[pagePath]
+  let definition = null
+  global.Page = (value) => { definition = value }
+  require(pagePath)
+  delete global.Page
+  const cells = definition.buildCells('2026-11', [
+    { day: '2026-11-01', checked_in: true, passed: false },
+    { day: '2026-11-02', passed: true },
+    { day: '2026-11-03', checked_in: false, passed: false }
+  ])
+  const byKey = {}
+  cells.forEach((cell) => { byKey[cell.key] = cell.checkedIn })
+  assert.strictEqual(byKey['2026-11-01'], true)
+  assert.strictEqual(byKey['2026-11-02'], true)
+  assert.strictEqual(byKey['2026-11-03'], false)
 })
 
 ;(async () => {

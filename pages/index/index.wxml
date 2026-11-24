@@ -37,13 +37,16 @@
 
   <view class="card" wx:else>
     <view class="challenge-title">{{challenge.title}}</view>
-    <view class="muted">{{challenge.items.length}} 道题 · 答对 80% 即打卡成功</view>
+    <view class="muted">{{challenge.items.length}} 道题 · 至少 2 星自动打卡</view>
 
     <view class="done" wx:if="{{attempt}}">
       <view class="score">{{attempt.score}} / {{attempt.total}}</view>
-      <view class="{{attempt.passed ? 'pass' : 'fail'}}">{{attempt.passed ? '已打卡' : '未通过，明天继续'}}</view>
+      <view class="stars">本次 {{attempt.stars}} 星 · 历史最高 {{attempt.best_stars}} 星</view>
+      <view class="{{attempt.checked_in || attempt.passed ? 'pass' : 'fail'}}">
+        {{attempt.checked_in || attempt.passed ? '已打卡' : '尚未打卡，继续挑战'}}
+      </view>
     </view>
-    <button wx:else class="btn-primary" bindtap="startChallenge">开始答题</button>
+    <button class="btn-primary" bindtap="startChallenge">{{attempt ? '再次挑战' : '开始答题'}}</button>
   </view>
 
   <view class="card">
@@ -56,7 +59,7 @@
       <view
         wx:for="{{cells}}"
         wx:key="key"
-        class="cell {{item.passed ? 'cell-passed' : ''}} {{item.day ? '' : 'cell-blank'}}"
+        class="cell {{item.checkedIn ? 'cell-passed' : ''}} {{item.day ? '' : 'cell-blank'}}"
       >
         <view class="cell-inner">{{item.day}}</view>
       </view>

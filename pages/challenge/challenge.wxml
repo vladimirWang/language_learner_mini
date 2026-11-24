@@ -11,8 +11,9 @@
   <block wx:elif="{{challenge}}">
     <view class="card head">
       <view class="title">{{challenge.title}}</view>
-      <view class="muted">共 {{items.length}} 题 · 答对 80% 即打卡成功</view>
-      <view class="done-tip" wx:if="{{attempt}}">今天已作答，本次提交不会覆盖首次成绩。</view>
+      <view class="muted">标准 6 题每答对 2 题得 1 星 · 至少 2 星自动打卡</view>
+      <view class="muted rule-tip">不足 6 题按正确率折算，并执行 60% 向下取整兜底</view>
+      <view class="done-tip" wx:if="{{attempt}}">已恢复最近一次答案（本次 {{attempt.stars}} 星，历史最高 {{attempt.best_stars}} 星），可修改后重新提交。</view>
     </view>
 
     <view class="card" wx:for="{{items}}" wx:key="seq">
@@ -36,7 +37,7 @@
     </view>
 
     <view class="footer">
-      <button class="btn-primary" loading="{{submitting}}" bindtap="submit">提交答案</button>
+      <button class="btn-primary" loading="{{submitting}}" bindtap="submit">{{attempt ? '重新提交' : '提交答案'}}</button>
     </view>
   </block>
 </view>

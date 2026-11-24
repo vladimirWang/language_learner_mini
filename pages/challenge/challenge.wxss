@@ -12,6 +12,11 @@
   margin-bottom: 8rpx;
 }
 
+.rule-tip {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+}
+
 .done-tip {
   margin-top: 12rpx;
   color: #ad6800;

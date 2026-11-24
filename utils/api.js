@@ -117,6 +117,62 @@ function ensureLogin() {
   return login().then(() => getToken())
 }
 
+function getMe() {
+  return request('/api/auth/wx-me')
+}
+
+function updateNickname(nickname) {
+  return request('/api/auth/wx-profile', {
+    method: 'PUT',
+    data: { nickname }
+  })
+}
+
+/** 上传微信头像；401 重登后仅重试一次，网络错误与 503 不重试。 */
+function uploadAvatar(filePath, _retried) {
+  return new Promise((resolve, reject) => {
+    const header = {}
+    const token = getToken()
+    if (token) header.Authorization = 'Bearer ' + token
+    wx.uploadFile({
+      url: BASE_URL + '/api/auth/wx-avatar',
+      filePath,
+      name: 'avatar',
+      header,
+      timeout: REQUEST_TIMEOUT,
+      success(res) {
+        const status = res && res.statusCode
+        let data = res && res.data
+        if (typeof data === 'string') {
+          try { data = JSON.parse(data) } catch (e) { data = { error: data } }
+        }
+        const response = { statusCode: status, data }
+        if (status >= 200 && status < 300) {
+          resolve(data)
+          return
+        }
+        if (status === 503) {
+          reject(new Error(SERVICE_UNAVAILABLE))
+          return
+        }
+        if (status === 401 && !_retried) {
+          clearToken()
+          login().then(() => {
+            uploadAvatar(filePath, true).then(resolve).catch(reject)
+          }).catch(reject)
+          return
+        }
+        const err = new Error(errorMessage(response))
+        err.statusCode = status
+        reject(err)
+      },
+      fail(err) {
+        reject(new Error((err && err.errMsg) || '网络异常'))
+      }
+    })
+  })
+}
+
 module.exports = {
   BASE_URL: BASE_URL,
   SERVICE_UNAVAILABLE: SERVICE_UNAVAILABLE,
@@ -124,5 +180,8 @@ module.exports = {
   clearToken: clearToken,
   request: request,
   login: login,
-  ensureLogin: ensureLogin
+  ensureLogin: ensureLogin,
+  getMe: getMe,
+  updateNickname: updateNickname,
+  uploadAvatar: uploadAvatar
 }

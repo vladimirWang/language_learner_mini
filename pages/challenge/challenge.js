@@ -35,20 +35,27 @@ Page({
         this.setData({ error: '关卡日期已变化，请返回首页刷新' })
         return
       }
-      const items = data.challenge.items.map((item) => ({
-        seq: item.seq,
-        kind: item.kind,
-        prompt: item.prompt,
-        selectedIndex: -1,
-        selected: ''
-      }))
+      const answers = (data.attempt && data.attempt.answers) || []
+      const selectedBySeq = {}
+      answers.forEach((answer) => { selectedBySeq[answer.seq] = answer.value })
+      const items = data.challenge.items.map((item) => {
+        const selected = selectedBySeq[item.seq] || ''
+        const selectedIndex = item.prompt.options.indexOf(selected)
+        return {
+          seq: item.seq,
+          kind: item.kind,
+          prompt: item.prompt,
+          selectedIndex,
+          selected: selectedIndex >= 0 ? selected : ''
+        }
+      })
       this.setData({
         challenge: data.challenge,
         items,
         attempt: data.attempt || null
       })
       if (data.attempt) {
-        wx.showToast({ title: '今日已作答', icon: 'none' })
+        wx.showToast({ title: '已恢复最近作答', icon: 'none' })
       }
     } catch (error) {
       this.setData({ error: error.message || '加载失败' })
