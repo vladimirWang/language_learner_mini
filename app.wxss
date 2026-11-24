@@ -1,4 +1,6 @@
 page {
+  /* 项目主题色：与 tabBar 选中色、管理端主色一致；页面内统一从这里取值 */
+  --theme-color: #1677ff;
   background: #f6f7f9;
   color: #1f2329;
   font-size: 28rpx;
@@ -13,7 +15,7 @@ page {
 }
 
 .btn-primary {
-  background: #1677ff;
+  background: var(--theme-color, #1677ff);
   color: #fff;
   border-radius: 16rpx;
   font-size: 32rpx;

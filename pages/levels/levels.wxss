@@ -1,0 +1,95 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.swiper-wrap {
+  flex: 1;
+  min-height: 0;
+}
+
+.card-swiper {
+  height: 100%;
+}
+
+.swiper-item {
+  display: block;
+  height: 100%;
+}
+
+.day-card {
+  /* 全局 .card 自带 32rpx padding + 上下各 24rpx margin，必须按 border-box
+     计算并把 margin 扣掉，否则卡片比 swiper 容器高，底部按钮会被裁切。 */
+  box-sizing: border-box;
+  height: calc(100% - 48rpx);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.day-date {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: var(--theme-color, #1677ff);
+  margin-top: 8rpx;
+}
+
+.iso {
+  font-size: 24rpx;
+  margin-top: 4rpx;
+  margin-bottom: 24rpx;
+}
+
+.challenge-type {
+  align-self: flex-start;
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background: #eef5ff;
+  color: #0958d9;
+  font-size: 24rpx;
+}
+
+.challenge-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  margin: 20rpx 0 8rpx;
+}
+
+.stars {
+  margin-top: 24rpx;
+  color: #ad6800;
+  font-size: 30rpx;
+}
+
+.checkin {
+  margin: 16rpx 0;
+  font-size: 26rpx;
+  color: #8a919f;
+}
+
+.checkin.checked {
+  color: #389e0d;
+}
+
+.btn-primary {
+  margin-top: auto;
+  flex-shrink: 0;
+  min-height: 88rpx;
+  line-height: 88rpx;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  padding: 48rpx 0;
+  text-align: center;
+}
+
+.error {
+  color: #d4380d;
+  margin-bottom: 16rpx;
+}

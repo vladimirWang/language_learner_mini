@@ -10,17 +10,29 @@
 
   <block wx:elif="{{challenge}}">
     <view class="card head">
+      <view class="row">
+        <view class="type-tag">{{typeLabel}}</view>
+        <view class="muted">{{challenge.day}} · {{lang}} {{level}}</view>
+      </view>
       <view class="title">{{challenge.title}}</view>
-      <view class="muted">标准 6 题每答对 2 题得 1 星 · 至少 2 星自动打卡</view>
-      <view class="muted rule-tip">不足 6 题按正确率折算，并执行 60% 向下取整兜底</view>
+      <view class="muted">6 题每答对 2 题得 1 星，至少 2 星自动签到；不足 6 题按比例折算。</view>
       <view class="done-tip" wx:if="{{attempt}}">已恢复最近一次答案（本次 {{attempt.stars}} 星，历史最高 {{attempt.best_stars}} 星），可修改后重新提交。</view>
     </view>
 
     <view class="card" wx:for="{{items}}" wx:key="seq">
       <view class="q-head">
         <view class="q-index">第 {{item.seq}} 题</view>
-        <view class="q-kind">{{item.kind === 'word' ? '单词' : item.kind === 'collocation' ? '固定搭配' : '语法'}}</view>
+        <view class="q-kind">{{item.kindLabel}}</view>
       </view>
+
+      <view class="audio-bar" wx:if="{{item.audioUrl}}">
+        <view class="audio-btn" data-seq="{{item.seq}}" bindtap="toggleAudio">
+          {{playingSeq === item.seq ? '暂停' : (audioProgress !== '0:00 / 0:00' ? '重播' : '播放')}}
+        </view>
+        <view class="audio-progress">{{audioProgress}}</view>
+      </view>
+      <view class="audio-error" wx:if="{{audioErrorSeq === item.seq}}">音频加载失败，请重试</view>
+
       <view class="q-title">{{item.prompt.question}}</view>
       <view
         wx:for="{{item.prompt.options}}"
@@ -37,7 +49,7 @@
     </view>
 
     <view class="footer">
-      <button class="btn-primary" loading="{{submitting}}" bindtap="submit">{{attempt ? '重新提交' : '提交答案'}}</button>
+      <button class="btn-primary" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit">{{attempt ? '重新提交' : '提交答案'}}</button>
     </view>
   </block>
 </view>

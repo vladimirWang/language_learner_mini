@@ -1,12 +1,41 @@
 // 后端地址与请求封装。
-// 说明：管理台与后端 API 同入口 https://mp.hetou.vip:5443，nginx 把 /api/ 反代到后端。
-// 微信「合法域名」支持带端口，后台配 https://mp.hetou.vip:5443 即可（已实测 443 不通、5443 正常）。
-// 发布前确认：BASE_URL 与小程序后台 request 合法域名一致。
+// 环境区分（按 wx.getAccountInfoSync().miniProgram.envVersion）：
+//   develop（开发版）   → http://127.0.0.1:8080（本地后端；开发者工具模拟器可直连，真机需改成电脑局域网 IP）
+//   trial / release    → https://mp.hetou.vip:5443（线上，nginx 把 /api/ 反代到后端）
+// 真机调试覆盖：在 app.js 的 onLaunch 里设置 getApp().globalData.apiBase = 'http://<电脑局域网IP>:8080'。
+// 微信「合法域名」支持带端口，线上后台配 https://mp.hetou.vip:5443（已实测 443 不通、5443 正常）。
 
 // 请求超时（方案第 7 节：建议 10 秒）。
 const REQUEST_TIMEOUT = 10000
-const BASE_URL = 'https://mp.hetou.vip:5443'
+const DEV_BASE_URL = 'http://127.0.0.1:8080'
+const PROD_BASE_URL = 'https://mp.hetou.vip:5443'
 const TOKEN_KEY = 'wx_token'
+const session = require('./store/session.js')
+
+/** 当前小程序环境版本；取不到时按线上处理，避免开发配置误入正式版。 */
+function detectEnvVersion() {
+  try {
+    if (typeof wx !== 'undefined' && typeof wx.getAccountInfoSync === 'function') {
+      const info = wx.getAccountInfoSync()
+      if (info && info.miniProgram && info.miniProgram.envVersion) return info.miniProgram.envVersion
+    }
+  } catch (e) { /* 基础库不支持时按线上处理 */ }
+  return 'release'
+}
+
+/** 运行时解析后端地址：globalData.apiBase 覆盖优先，否则按环境选择。 */
+function getBaseUrl() {
+  try {
+    const app = typeof getApp === 'function' ? getApp() : null
+    if (app && app.globalData && app.globalData.apiBase) {
+      return String(app.globalData.apiBase).replace(/\/+$/, '')
+    }
+  } catch (e) { /* App 尚未初始化时按环境判断 */ }
+  return detectEnvVersion() === 'develop' ? DEV_BASE_URL : PROD_BASE_URL
+}
+
+// 兼容原有导出的常量（取模块加载时的环境值）；请求内部一律用 getBaseUrl() 动态解析。
+const BASE_URL = getBaseUrl()
 
 // 登录失败/无配置的错误文案，供页面直接展示，不循环重试。
 const SERVICE_UNAVAILABLE = '服务暂未开放'
@@ -19,6 +48,11 @@ function clearToken() {
   try {
     wx.removeStorageSync(TOKEN_KEY)
   } catch (e) { /* 忽略存储异常 */ }
+}
+
+// 服务端返回的 user 是等级/身份权威值，统一写入全局 store。
+function syncUser(data) {
+  if (data && data.user) session.setUser(data.user)
 }
 
 function errorMessage(res) {
@@ -48,7 +82,7 @@ function request(path, options, _retried) {
     if (auth && token) header.Authorization = 'Bearer ' + token
 
     wx.request({
-      url: BASE_URL + path,
+      url: getBaseUrl() + path,
       method: opts.method || 'GET',
       data: opts.data,
       header: header,
@@ -98,6 +132,7 @@ function login() {
         }).then((data) => {
           if (data && data.token) {
             wx.setStorageSync(TOKEN_KEY, data.token)
+            syncUser(data)
             resolve(data)
           } else {
             reject(new Error('登录响应缺少 token'))
@@ -118,14 +153,30 @@ function ensureLogin() {
 }
 
 function getMe() {
-  return request('/api/auth/wx-me')
+  return request('/api/auth/wx-me').then((data) => {
+    syncUser(data)
+    return data
+  })
+}
+
+/** 按方案 §4.2：nickname / level 至少传一项；成功后同步 store。 */
+function updateProfile(profile) {
+  const payload = profile || {}
+  return request('/api/auth/wx-profile', {
+    method: 'PUT',
+    data: payload
+  }).then((data) => {
+    syncUser(data)
+    return data
+  })
 }
 
 function updateNickname(nickname) {
-  return request('/api/auth/wx-profile', {
-    method: 'PUT',
-    data: { nickname }
-  })
+  return updateProfile({ nickname: nickname })
+}
+
+function updateLevel(level) {
+  return updateProfile({ level: level })
 }
 
 /** 上传微信头像；401 重登后仅重试一次，网络错误与 503 不重试。 */
@@ -135,7 +186,7 @@ function uploadAvatar(filePath, _retried) {
     const token = getToken()
     if (token) header.Authorization = 'Bearer ' + token
     wx.uploadFile({
-      url: BASE_URL + '/api/auth/wx-avatar',
+      url: getBaseUrl() + '/api/auth/wx-avatar',
       filePath,
       name: 'avatar',
       header,
@@ -148,6 +199,7 @@ function uploadAvatar(filePath, _retried) {
         }
         const response = { statusCode: status, data }
         if (status >= 200 && status < 300) {
+          syncUser(data)
           resolve(data)
           return
         }
@@ -175,13 +227,23 @@ function uploadAvatar(filePath, _retried) {
 
 module.exports = {
   BASE_URL: BASE_URL,
+  DEV_BASE_URL: DEV_BASE_URL,
+  PROD_BASE_URL: PROD_BASE_URL,
+  getBaseUrl: getBaseUrl,
+  detectEnvVersion: detectEnvVersion,
   SERVICE_UNAVAILABLE: SERVICE_UNAVAILABLE,
   getToken: getToken,
   clearToken: clearToken,
+  logout: function logout() {
+    clearToken()
+    session.clear()
+  },
   request: request,
   login: login,
   ensureLogin: ensureLogin,
   getMe: getMe,
+  updateProfile: updateProfile,
   updateNickname: updateNickname,
+  updateLevel: updateLevel,
   uploadAvatar: uploadAvatar
 }

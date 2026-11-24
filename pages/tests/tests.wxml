@@ -1,0 +1,35 @@
+<view class="page">
+  <view class="card">
+    <view class="title">测试配置</view>
+    <view class="muted">以下为管理端配置的测试列表，与每日关卡无关</view>
+  </view>
+
+  <view class="card" wx:if="{{loading}}">
+    <view class="muted">加载中…</view>
+  </view>
+
+  <view class="card" wx:elif="{{error}}">
+    <view class="error">{{error}}</view>
+    <button class="btn-primary" bindtap="retry">重试</button>
+  </view>
+
+  <block wx:else>
+    <view class="card empty" wx:if="{{levels.length === 0}}">
+      <view class="empty-title">暂无测试配置</view>
+    </view>
+
+    <view class="card test-item" wx:for="{{levels}}" wx:key="id">
+      <view class="row">
+        <view class="name">{{item.name}}</view>
+        <view class="badge {{item.active ? 'badge-active' : 'badge-inactive'}}">
+          {{item.active ? '已生效' : '未生效'}}
+        </view>
+      </view>
+      <view class="meta">
+        <text class="tag">{{item.difficulty}}</text>
+        <text class="muted">{{item.lang}}</text>
+      </view>
+      <view class="description">{{item.description || '暂无描述'}}</view>
+    </view>
+  </block>
+</view>

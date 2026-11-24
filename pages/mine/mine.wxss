@@ -1,3 +1,12 @@
+.calendar-entry {
+  margin-top: 24rpx;
+}
+
+.entry-arrow {
+  font-size: 48rpx;
+  color: #8a919f;
+}
+
 .profile {
   display: flex;
   flex-direction: row;
@@ -51,6 +60,10 @@
   line-height: 52rpx;
 }
 
+.user-id {
+  font-size: 22rpx;
+}
+
 .total-stars {
   margin-left: 20rpx;
   text-align: center;
@@ -89,6 +102,14 @@
 .info-value {
   font-size: 28rpx;
   color: #1f2329;
+}
+
+.level-picker {
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background: #eef5ff;
+  color: #0958d9;
+  font-size: 26rpx;
 }
 
 .tip {

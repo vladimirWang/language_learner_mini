@@ -1,57 +1,73 @@
-// 我的：展示登录状态、学习偏好、连续打卡，并提供重置进度入口。
+// 我的：微信资料、累计星星、学习偏好与连续签到。等级修改必须先持久化到后端。
 const api = require('../../utils/api.js')
+const session = require('../../utils/store/session.js')
 
-const LANG_LABELS = { de: '德语', en: '英语', ja: '日语' }
+const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'N1', 'N2', 'N3', 'N4', 'N5']
+const AVATAR_EXT = /\.(jpe?g|png|webp)$/i
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024
 
 Page({
   data: {
     loggedIn: false,
     lang: 'de',
     level: 'A1',
-    langLabel: '德语',
+    levels: LEVELS,
+    levelIndex: 0,
+    userId: 0,
     user: null,
     nickname: '微信用户',
     draftNickname: '',
     avatarPreview: '',
     pendingAvatarPath: '',
     totalStars: 0,
-    streak: { current: 0, longest: 0, last_day: null },
+    streak: { current: 0, longest: 0, last_day: '' },
     loading: true,
     saving: false,
     loadError: ''
+  },
+
+  onLoad() {
+    this.applyState(session.getState())
+    this.unsubscribe = session.subscribe((state) => this.applyState(state))
+  },
+
+  onUnload() {
+    if (this.unsubscribe) this.unsubscribe()
   },
 
   onShow() {
     this.refresh()
   },
 
-  async refresh() {
-    const app = getApp()
-    const lang = (app && app.globalData.lang) || wx.getStorageSync('challenge_lang') || 'de'
-    const level = (app && app.globalData.level) || wx.getStorageSync('challenge_level') || 'A1'
+  applyState(state) {
     this.setData({
-      loggedIn: !!api.getToken(),
-      lang,
-      level,
-      langLabel: LANG_LABELS[lang] || lang,
-      loading: true,
-      loadError: ''
+      loggedIn: !!state.user,
+      lang: state.lang,
+      level: state.level,
+      levelIndex: Math.max(0, LEVELS.indexOf(state.level)),
+      userId: state.userId,
+      user: state.user
     })
+  },
+
+  async refresh() {
+    this.setData({ loading: true, loadError: '' })
     try {
       await api.ensureLogin()
       const [me, streakData] = await Promise.all([
         api.getMe(),
-        api.request('/api/levels/streak?lang=' + lang).catch(() => null)
+        api.request('/api/levels/streak?lang=de').catch(() => null)
       ])
-      const user = (me && me.user) || {}
+      const user = (me && me.user) || null
+      // getMe 内部已同步 store；这里同步一次页面显示，避免异步通知时序差异。
+      this.applyState(session.getState())
       this.setData({
-        loggedIn: true,
-        user,
-        nickname: user.nickname || '微信用户',
-        draftNickname: user.nickname || '',
-        avatarPreview: user.avatar || '',
+        loggedIn: !!user,
+        nickname: (user && user.nickname) || '微信用户',
+        draftNickname: (user && user.nickname) || '',
+        avatarPreview: (user && user.avatar) || '',
         pendingAvatarPath: '',
-        totalStars: user.total_stars || 0,
+        totalStars: (user && user.total_stars) || 0,
         streak: (streakData && streakData.streak) || this.data.streak
       })
     } catch (e) {
@@ -64,7 +80,21 @@ Page({
   onChooseAvatar(e) {
     const filePath = e.detail && e.detail.avatarUrl
     if (!filePath) return
-    this.setData({ pendingAvatarPath: filePath, avatarPreview: filePath })
+    if (!AVATAR_EXT.test(filePath)) {
+      wx.showToast({ title: '仅支持 JPEG / PNG / WebP 图片', icon: 'none' })
+      return
+    }
+    wx.getFileInfo({
+      filePath: filePath,
+      success: (info) => {
+        if (info.size > MAX_AVATAR_BYTES) {
+          wx.showToast({ title: '头像不能超过 5 MiB', icon: 'none' })
+          return
+        }
+        this.setData({ pendingAvatarPath: filePath, avatarPreview: filePath })
+      },
+      fail: () => wx.showToast({ title: '头像读取失败，请重试', icon: 'none' })
+    })
   },
 
   onNicknameInput(e) {
@@ -76,6 +106,10 @@ Page({
     const nickname = (this.data.draftNickname || '').trim()
     const currentNickname = (this.data.user && this.data.user.nickname) || ''
     const avatarPath = this.data.pendingAvatarPath
+    if (nickname.length > 64) {
+      wx.showToast({ title: '昵称最多 64 个字符', icon: 'none' })
+      return
+    }
     if (!avatarPath && !nickname) {
       wx.showToast({ title: '请输入昵称', icon: 'none' })
       return
@@ -98,21 +132,22 @@ Page({
     }
   },
 
-  onReset() {
-    wx.showModal({
-      title: '重置进度',
-      content: '确定清空所有关卡进度、连续天数与答题记录吗？此操作不可撤销。',
-      confirmColor: '#C0392B',
-      success: (res) => {
-        if (!res.confirm) return
-        try {
-          ;['wx_token', 'challenge_lang', 'challenge_level', 'last_challenge_result'].forEach((k) => {
-            wx.removeStorageSync(k)
-          })
-        } catch (e) { /* 忽略存储异常 */ }
-        wx.showToast({ title: '已重置', icon: 'success' })
-        this.refresh()
-      }
-    })
+  goCalendar() {
+    wx.navigateTo({ url: '/pages/calendar/calendar' })
+  },
+
+  async onLevelChange(e) {
+    const level = LEVELS[Number(e.detail.value)]
+    if (!level || level === this.data.level) return
+    try {
+      await api.ensureLogin()
+      const data = await api.updateLevel(level)
+      // 成功后才更新本地；返回值带 user 时由 api.updateLevel 注入 store。
+      if (!data || !data.user) session.setLevel(level)
+      wx.showToast({ title: '等级已更新', icon: 'success' })
+      await this.refresh()
+    } catch (err) {
+      wx.showModal({ title: '等级更新失败', content: err.message || '请稍后重试', showCancel: false })
+    }
   }
 })

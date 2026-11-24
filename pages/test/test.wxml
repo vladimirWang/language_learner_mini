@@ -1,7 +1,0 @@
-<view class="page">
-  <view class="card placeholder">
-    <view class="ph-icon">🧪</view>
-    <view class="ph-title">测试中</view>
-    <view class="muted">功能建设中，敬请期待</view>
-  </view>
-</view>

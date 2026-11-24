@@ -9,6 +9,7 @@
         <input wx:if="{{loggedIn}}" class="name name-input" type="nickname" value="{{draftNickname}}" placeholder="微信用户" maxlength="64" bindinput="onNicknameInput" />
         <view wx:else class="name">未登录</view>
         <view class="muted">{{loggedIn ? nickname : '进入关卡将自动登录'}}</view>
+        <view class="muted user-id" wx:if="{{userId}}">用户 ID：{{userId}}</view>
       </view>
       <view class="total-stars">
         <view class="star-number">{{totalStars}}</view>
@@ -23,31 +24,25 @@
     <view class="section-title">学习偏好</view>
     <view class="info-row">
       <text class="muted">语种</text>
-      <text class="info-value">{{langLabel}}</text>
+      <text class="info-value">德语</text>
     </view>
     <view class="info-row">
       <text class="muted">等级</text>
-      <text class="info-value">{{level}}</text>
+      <picker mode="selector" range="{{levels}}" value="{{levelIndex}}" bindchange="onLevelChange" disabled="{{!loggedIn}}">
+        <view class="level-picker">{{level}} ▾</view>
+      </picker>
     </view>
-    <view class="muted tip">在「关卡」页顶部可切换语种与等级</view>
+    <view class="muted tip">修改等级会保存到服务器，关卡与日历将按新等级刷新</view>
   </view>
 
-  <view class="card">
-    <view class="section-title">打卡记录</view>
-    <view class="streak-row">
-      <view class="streak-block">
-        <view class="streak-num">{{streak.current}}</view>
-        <view class="muted">当前连续（天）</view>
+  <view class="card calendar-entry" bindtap="goCalendar">
+    <view class="row">
+      <view>
+        <view class="section-title">打卡日历</view>
+        <view class="muted">连续 {{streak.current}} 天 · 最长 {{streak.longest}} 天</view>
+        <view class="muted last-day" wx:if="{{streak.last_day}}">最近打卡：{{streak.last_day}}</view>
       </view>
-      <view class="streak-block">
-        <view class="streak-num">{{streak.longest}}</view>
-        <view class="muted">最长连续（天）</view>
-      </view>
+      <view class="entry-arrow">›</view>
     </view>
-    <view class="muted last-day" wx:if="{{streak.last_day}}">最近打卡：{{streak.last_day}}</view>
-  </view>
-
-  <view class="footer">
-    <button class="btn-reset" bindtap="onReset">重置进度</button>
   </view>
 </view>

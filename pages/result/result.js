@@ -44,6 +44,6 @@ Page({
   },
 
   goHome() {
-    wx.reLaunch({ url: '/pages/index/index' })
+    wx.reLaunch({ url: '/pages/levels/levels' })
   }
 })

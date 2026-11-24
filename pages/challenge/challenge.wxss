@@ -17,6 +17,44 @@
   font-size: 24rpx;
 }
 
+.type-tag {
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background: #eef5ff;
+  color: #0958d9;
+  font-size: 24rpx;
+}
+
+.audio-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 20rpx;
+  border-radius: 14rpx;
+  background: #f2f3f5;
+}
+
+.audio-btn {
+  padding: 10rpx 28rpx;
+  border-radius: 999rpx;
+  background: #1677ff;
+  color: #fff;
+  font-size: 26rpx;
+}
+
+.audio-progress {
+  color: #8a919f;
+  font-size: 24rpx;
+}
+
+.audio-error {
+  margin-bottom: 16rpx;
+  color: #d4380d;
+  font-size: 24rpx;
+}
+
 .done-tip {
   margin-top: 12rpx;
   color: #ad6800;

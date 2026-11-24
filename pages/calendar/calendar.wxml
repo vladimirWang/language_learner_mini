@@ -1,0 +1,61 @@
+<view class="page">
+  <view class="card">
+    <view class="row">
+      <view class="section-title">打卡日历</view>
+      <view class="muted">{{monthLabel}}</view>
+    </view>
+    <view class="streak-row">
+      <view class="streak-block">
+        <view class="streak-num">{{streak.current}}</view>
+        <view class="muted">当前连续（天）</view>
+      </view>
+      <view class="streak-block">
+        <view class="streak-num">{{streak.longest}}</view>
+        <view class="muted">最长连续（天）</view>
+      </view>
+    </view>
+    <view class="muted last-day" wx:if="{{streak.last_day}}">最近打卡：{{streak.last_day}}</view>
+  </view>
+
+  <view class="card" wx:if="{{loading}}">
+    <view class="muted">加载中…</view>
+  </view>
+
+  <view class="card" wx:elif="{{error}}">
+    <view class="error">{{error}}</view>
+    <button class="btn-primary" bindtap="retry">重试</button>
+  </view>
+
+  <block wx:else>
+    <view class="card">
+      <view class="month-nav">
+        <button class="btn-nav" bindtap="prevMonth">上一月</button>
+        <button class="btn-nav" bindtap="nextMonth" disabled="{{!canGoNext}}">下一月</button>
+      </view>
+
+      <view class="calendar" wx:if="{{!empty}}">
+        <view class="weekday" wx:for="{{weekdays}}" wx:key="*this">{{item}}</view>
+        <view
+          wx:for="{{cells}}"
+          wx:key="key"
+          class="cell {{item.checkedIn ? 'cell-passed' : ''}} {{item.day ? '' : 'cell-blank'}} {{selected && selected.date === item.date ? 'cell-selected' : ''}}"
+          data-date="{{item.date}}"
+          bindtap="onCellTap"
+        >
+          <view class="cell-inner">{{item.day}}</view>
+        </view>
+      </view>
+
+      <view class="empty" wx:else>
+        <view class="empty-title">本月暂无记录</view>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{selected}}">
+      <view class="section-title">{{selected.date}} 成绩</view>
+      <view class="muted" wx:if="{{selected.title}}">{{selected.title}}</view>
+      <view class="muted">得分 {{selected.score}} / {{selected.total}} · 最新 {{selected.stars}} 星 · 最高 {{selected.bestStars}} 星</view>
+      <view class="muted">{{selected.checkedIn ? '已签到' : '未签到'}}</view>
+    </view>
+  </block>
+</view>

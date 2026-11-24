@@ -1,0 +1,46 @@
+<view class="page">
+  <view class="card" wx:if="{{loading}}">
+    <view class="muted">加载中…</view>
+  </view>
+
+  <view class="card" wx:elif="{{error}}">
+    <view class="error">{{error}}</view>
+    <button class="btn-primary" bindtap="retry">重试</button>
+  </view>
+
+  <view wx:else class="swiper-wrap">
+    <swiper
+      class="card-swiper"
+      vertical="{{true}}"
+      current="{{currentIndex}}"
+      bindchange="onSwiperChange"
+    >
+      <swiper-item wx:for="{{cards}}" wx:key="day" class="swiper-item">
+        <view class="card day-card">
+          <view class="day-date">{{item.dateLabel}}</view>
+          <view class="muted iso">{{item.iso}}</view>
+
+          <block wx:if="{{item.title}}">
+            <view class="challenge-type">{{item.typeLabel}}</view>
+            <view class="challenge-title">{{item.title}}</view>
+            <view class="stars">最新 {{item.latestStars}} 星 · 历史最高 {{item.bestStars}} 星</view>
+            <view class="checkin {{item.checkedIn ? 'checked' : ''}}">
+              {{item.checkedIn ? '✓ 已签到' : '未签到（至少 2 星）'}}
+            </view>
+            <button
+              class="btn-primary"
+              data-index="{{index}}"
+              bindtap="goCard"
+            >
+              {{item.canAnswer ? (item.hasAttempt ? '再次挑战' : '开始答题') : (item.hasAttempt ? '查看成绩' : '已过期')}}
+            </button>
+          </block>
+
+          <block wx:else>
+            <view class="empty-title">{{item.isToday ? item.reason : '该日暂无关卡'}}</view>
+          </block>
+        </view>
+      </swiper-item>
+    </swiper>
+  </view>
+</view>

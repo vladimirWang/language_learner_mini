@@ -39,6 +39,11 @@
   margin-bottom: 12rpx;
 }
 
+.retry-tip {
+  margin-bottom: 12rpx;
+  color: #ad6800;
+}
+
 .challenge-meta {
   margin-top: 12rpx;
 }

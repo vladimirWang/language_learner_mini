@@ -1,9 +1,10 @@
 {
   "pages": [
-    "pages/index/index",
+    "pages/levels/levels",
+    "pages/calendar/calendar",
+    "pages/tests/tests",
     "pages/challenge/challenge",
     "pages/result/result",
-    "pages/test/test",
     "pages/mine/mine"
   ],
   "window": {
@@ -19,13 +20,13 @@
     "borderStyle": "black",
     "list": [
       {
-        "pagePath": "pages/index/index",
+        "pagePath": "pages/levels/levels",
         "text": "关卡",
         "iconPath": "assets/tabbar/level.png",
         "selectedIconPath": "assets/tabbar/level-active.png"
       },
       {
-        "pagePath": "pages/test/test",
+        "pagePath": "pages/tests/tests",
         "text": "测试",
         "iconPath": "assets/tabbar/test.png",
         "selectedIconPath": "assets/tabbar/test-active.png"
