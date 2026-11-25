@@ -68,21 +68,25 @@
             <view class="muted">结算中…</view>
           </block>
           <block wx:else>
-            <view class="result-stars">{{levelState[challenge.id].result.stars}} 星</view>
+            <view class="result-stars" aria-label="获得 {{levelState[challenge.id].result.stars}} 星">
+              <text class="star-icon {{levelState[challenge.id].result.stars >= 1 ? 'filled' : ''}}">★</text>
+              <text class="star-icon {{levelState[challenge.id].result.stars >= 2 ? 'filled' : ''}}">★</text>
+              <text class="star-icon {{levelState[challenge.id].result.stars >= 3 ? 'filled' : ''}}">★</text>
+            </view>
             <view class="result-score">答对 {{levelState[challenge.id].result.score}}/{{levelState[challenge.id].result.total}}</view>
+            <view class="review-entry" data-id="{{challenge.id}}" bindtap="openReview">查看题目 <text class="review-arrow">›</text></view>
             <view class="submit-error" wx:if="{{levelState[challenge.id].submitError}}">
               {{levelState[challenge.id].submitError}}
               <text class="link" data-id="{{challenge.id}}" bindtap="resubmit">重新提交</text>
             </view>
             <view class="result-actions">
-              <button class="btn-ghost" data-id="{{challenge.id}}" bindtap="openReview">查看题目</button>
               <button class="btn-ghost" data-id="{{challenge.id}}" bindtap="retryLevel">再答一次</button>
               <button
                 wx:if="{{challenges[index + 1] && challenges[index + 1].unlocked !== false}}"
                 class="btn-primary"
                 data-index="{{index}}"
                 bindtap="goNext"
-              >下一关</button>
+              >下一题</button>
               <view class="all-done" wx:elif="{{index === challenges.length - 1 && challenge.passed}}">已通关全部关卡</view>
             </view>
           </block>

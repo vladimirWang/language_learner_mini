@@ -407,17 +407,43 @@
   padding-top: 40rpx;
 }
 
+.result-stars {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  line-height: 1;
+}
+
+.star-icon {
+  font-size: 76rpx;
+  line-height: 1;
+  color: #d9d9d9;
+}
+
+.star-icon.filled {
+  color: #ff9500;
+  text-shadow: 0 4rpx 16rpx rgba(255, 149, 0, 0.45);
+}
+
 .result-score {
+  margin-top: 16rpx;
   font-size: 34rpx;
   font-weight: 600;
   color: #1f2329;
 }
 
-.result-stars {
-  font-size: 72rpx;
-  font-weight: 800;
-  color: #faad14;
-  line-height: 1.3;
+.review-entry {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: var(--theme-color, #1677ff);
+}
+
+.review-arrow {
+  margin-left: 4rpx;
+  font-size: 32rpx;
+  line-height: 1;
 }
 
 .submit-error {
@@ -433,6 +459,8 @@
 }
 
 .result-actions {
+  width: 100%;
+  box-sizing: border-box;
   margin-top: auto;
   display: flex;
   flex-direction: row;
@@ -449,10 +477,15 @@
 
 .result-actions .btn-primary,
 .result-actions .btn-ghost {
-  flex: 1;
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0 8rpx;
   min-height: 88rpx;
   line-height: 88rpx;
   margin: 0;
+  white-space: nowrap;
 }
 
 .all-done {
