@@ -386,6 +386,17 @@ test('结算数据 resultPanel：字段齐全、stars_added 可透传', () => {
   assert.strictEqual(r.streak.current, 4)
 })
 
+test('A-06 已完成关结算面板只展示星数与答对题数，页面无冗余统计文案', () => {
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxml'), 'utf8')
+  const banned = ['累计', '历史最高', '本次未增加', '已打卡', '未打卡', '连续', '解锁下一关']
+  banned.forEach((word) => {
+    assert.strictEqual(wxml.indexOf(word), -1, '页面不应出现：' + word)
+  })
+  assert.ok(wxml.indexOf('result.stars') >= 0, '展示服务端 stars')
+  assert.ok(wxml.indexOf('答对 {{levelState[challenge.id].result.score}}/{{levelState[challenge.id].result.total}}') >= 0, '展示答对 n/m')
+  assert.ok(wxml.indexOf('查看题目') >= 0 && wxml.indexOf('再答一次') >= 0, '保留回顾与重考入口')
+})
+
 // ---- 同步用例：日历 buildCells（新签名 days）----
 test('日历 buildCells：周一开头、days 高亮、无成绩字段', () => {
   const def = loadPage('../pages/calendar/calendar.js')

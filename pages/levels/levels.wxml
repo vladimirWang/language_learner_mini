@@ -2,7 +2,7 @@
   <!-- 顶部（无日期语义，只显示当前等级与进度） -->
   <view class="head">
     <view class="level-tag">{{level}}</view>
-    <view class="head-meta">已通关 {{progress.passed}}/{{progress.total}} · 累计 {{totalStars}} 星</view>
+    <view class="head-meta">已通关 {{progress.passed}}/{{progress.total}} · 共 {{totalStars}} 星</view>
   </view>
 
   <view class="card" wx:if="{{loading}}">
@@ -68,18 +68,8 @@
             <view class="muted">结算中…</view>
           </block>
           <block wx:else>
-            <view class="result-score">得分 {{levelState[challenge.id].result.score}}/{{levelState[challenge.id].result.total}}</view>
             <view class="result-stars">{{levelState[challenge.id].result.stars}} 星</view>
-            <view class="muted">历史最高 {{levelState[challenge.id].result.bestStars}} 星</view>
-            <view class="muted">{{levelState[challenge.id].result.starsAdded > 0 ? '本次累计 +' + levelState[challenge.id].result.starsAdded : '本次未增加累计星'}}</view>
-            <view class="muted">累计 {{levelState[challenge.id].result.totalStars}} 星</view>
-            <view class="checkin {{levelState[challenge.id].result.checkedIn ? 'checked' : ''}}">
-              {{levelState[challenge.id].result.checkedIn ? '✓ 已打卡' : '未打卡（通关得 2 星）'}}
-            </view>
-            <view class="muted" wx:if="{{levelState[challenge.id].result.streak}}">
-              连续 {{levelState[challenge.id].result.streak.current}} 天 · 最长 {{levelState[challenge.id].result.streak.longest}} 天
-            </view>
-            <view class="muted tip-warn" wx:if="{{!levelState[challenge.id].result.passed}}">再拿 2 星即可解锁下一关</view>
+            <view class="result-score">答对 {{levelState[challenge.id].result.score}}/{{levelState[challenge.id].result.total}}</view>
             <view class="submit-error" wx:if="{{levelState[challenge.id].submitError}}">
               {{levelState[challenge.id].submitError}}
               <text class="link" data-id="{{challenge.id}}" bindtap="resubmit">重新提交</text>
