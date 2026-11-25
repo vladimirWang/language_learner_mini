@@ -1,4 +1,10 @@
 <view class="page">
+  <!-- 顶部（无日期语义，只显示当前等级与进度） -->
+  <view class="head">
+    <view class="level-tag">{{level}}</view>
+    <view class="head-meta">已通关 {{progress.passed}}/{{progress.total}} · 累计 {{totalStars}} 星</view>
+  </view>
+
   <view class="card" wx:if="{{loading}}">
     <view class="muted">加载中…</view>
   </view>
@@ -8,39 +14,147 @@
     <button class="btn-primary" bindtap="retry">重试</button>
   </view>
 
-  <view wx:else class="swiper-wrap">
-    <swiper
-      class="card-swiper"
-      vertical="{{true}}"
-      current="{{currentIndex}}"
-      bindchange="onSwiperChange"
-    >
-      <swiper-item wx:for="{{cards}}" wx:key="day" class="swiper-item">
-        <view class="card day-card">
-          <view class="day-date">{{item.dateLabel}}</view>
-          <view class="muted iso">{{item.iso}}</view>
+  <view class="empty-wrap" wx:elif="{{!challenges.length}}">
+    <view class="empty-title">关卡准备中，请稍后下拉刷新</view>
+    <button class="btn-primary" bindtap="retry">刷新</button>
+  </view>
 
-          <block wx:if="{{item.title}}">
-            <view class="challenge-type">{{item.typeLabel}}</view>
-            <view class="challenge-title">{{item.title}}</view>
-            <view class="stars">最新 {{item.latestStars}} 星 · 历史最高 {{item.bestStars}} 星</view>
-            <view class="checkin {{item.checkedIn ? 'checked' : ''}}">
-              {{item.checkedIn ? '✓ 已签到' : '未签到（至少 2 星）'}}
-            </view>
-            <button
-              class="btn-primary"
-              data-index="{{index}}"
-              bindtap="goCard"
-            >
-              {{item.canAnswer ? (item.hasAttempt ? '再次挑战' : '开始答题') : (item.hasAttempt ? '查看成绩' : '已过期')}}
-            </button>
+  <!-- 竖向 swiper：一屏一关 -->
+  <swiper
+    wx:else
+    class="card-swiper"
+    vertical="{{true}}"
+    current="{{currentIndex}}"
+    disable-touch="{{swiperDisabled}}"
+    bindchange="onSwiperChange"
+  >
+    <swiper-item wx:for="{{challenges}}" wx:key="id" wx:for-item="challenge" class="swiper-item">
+      <view class="slide">
+        <!-- 关卡头 -->
+        <view class="level-head">
+          <view class="lh-row">
+            <text class="lh-pos">第 {{challenge.position}} 关</text>
+            <text class="lh-type">{{challenge.challenge_type === 'grammar' ? '语法' : (challenge.challenge_type === 'listening' ? '听力' : '单词与搭配')}}</text>
+            <text wx:if="{{challenge.passed}}" class="lh-passed">已通关</text>
+          </view>
+          <view class="lh-sub">
+            最高 {{challenge.best_stars}} 星
+            <block wx:if="{{levelState[challenge.id] && levelState[challenge.id].total}}">
+              · 已答 {{levelState[challenge.id].answeredCount}}/{{levelState[challenge.id].total}}
+            </block>
+          </view>
+        </view>
+
+        <!-- 加载中 -->
+        <view class="state-box" wx:if="{{levelState[challenge.id] && levelState[challenge.id].loading}}">
+          <view class="muted">题目加载中…</view>
+        </view>
+
+        <!-- 锁定态 -->
+        <view class="state-box lock-box" wx:elif="{{levelState[challenge.id] && levelState[challenge.id].locked}}">
+          <view class="lock-icon">🔒</view>
+          <view class="empty-title">完成上一关（2 星）即可解锁</view>
+        </view>
+
+        <!-- 详情加载失败 -->
+        <view class="state-box" wx:elif="{{levelState[challenge.id] && levelState[challenge.id].error}}">
+          <view class="error">{{levelState[challenge.id].error}}</view>
+          <button class="btn-primary" data-id="{{challenge.id}}" bindtap="onRetryLevel">重试</button>
+        </view>
+
+        <!-- 结算面板（内联） -->
+        <view class="state-box result-box" wx:elif="{{levelState[challenge.id] && levelState[challenge.id].result}}">
+          <block wx:if="{{levelState[challenge.id].submitting}}">
+            <view class="muted">结算中…</view>
           </block>
-
           <block wx:else>
-            <view class="empty-title">{{item.isToday ? item.reason : '该日暂无关卡'}}</view>
+            <view class="result-score">得分 {{levelState[challenge.id].result.score}}/{{levelState[challenge.id].result.total}}</view>
+            <view class="result-stars">{{levelState[challenge.id].result.stars}} 星</view>
+            <view class="muted">历史最高 {{levelState[challenge.id].result.bestStars}} 星</view>
+            <view class="muted">{{levelState[challenge.id].result.starsAdded > 0 ? '本次累计 +' + levelState[challenge.id].result.starsAdded : '本次未增加累计星'}}</view>
+            <view class="muted">累计 {{levelState[challenge.id].result.totalStars}} 星</view>
+            <view class="checkin {{levelState[challenge.id].result.checkedIn ? 'checked' : ''}}">
+              {{levelState[challenge.id].result.checkedIn ? '✓ 已打卡' : '未打卡（通关得 2 星）'}}
+            </view>
+            <view class="muted" wx:if="{{levelState[challenge.id].result.streak}}">
+              连续 {{levelState[challenge.id].result.streak.current}} 天 · 最长 {{levelState[challenge.id].result.streak.longest}} 天
+            </view>
+            <view class="muted tip-warn" wx:if="{{!levelState[challenge.id].result.passed}}">再拿 2 星即可解锁下一关</view>
+            <view class="submit-error" wx:if="{{levelState[challenge.id].submitError}}">
+              {{levelState[challenge.id].submitError}}
+              <text class="link" data-id="{{challenge.id}}" bindtap="resubmit">重新提交</text>
+            </view>
+            <view class="result-actions">
+              <button class="btn-ghost" data-id="{{challenge.id}}" bindtap="retryLevel">再答一次</button>
+              <button
+                wx:if="{{challenges[index + 1] && challenges[index + 1].unlocked !== false}}"
+                class="btn-primary"
+                data-index="{{index}}"
+                bindtap="goNext"
+              >下一关</button>
+              <view class="all-done" wx:elif="{{index === challenges.length - 1 && challenge.passed}}">已通关全部关卡</view>
+            </view>
           </block>
         </view>
-      </swiper-item>
-    </swiper>
-  </view>
+
+        <!-- 层叠卡片堆（答题中） -->
+        <view class="card-deck" wx:elif="{{levelState[challenge.id] && levelState[challenge.id].items && levelState[challenge.id].items.length}}">
+          <view
+            wx:for="{{levelState[challenge.id].stack}}"
+            wx:for-item="card"
+            wx:key="key"
+            class="stacked-card depth-{{card.depth}}"
+            style="{{card.style}}"
+          >
+            <!-- 仅顶层渲染真实题目 -->
+            <block wx:if="{{card.depth === 0}}">
+              <view class="q-head">
+                <text class="q-kind">{{levelState[challenge.id].current.kindLabel}}</text>
+                <text class="q-count">{{levelState[challenge.id].cursor + 1}}/{{levelState[challenge.id].total}}</text>
+              </view>
+
+              <view class="audio-bar" wx:if="{{levelState[challenge.id].current.audioUrl}}">
+                <view
+                  class="audio-btn"
+                  data-id="{{challenge.id}}"
+                  data-seq="{{levelState[challenge.id].current.seq}}"
+                  bindtap="toggleAudio"
+                >{{levelState[challenge.id].playingSeq === levelState[challenge.id].current.seq ? '暂停' : '播放'}}</view>
+                <view class="audio-progress">{{levelState[challenge.id].audioProgress}}</view>
+              </view>
+              <view class="audio-error" wx:if="{{levelState[challenge.id].audioErrorSeq === levelState[challenge.id].current.seq}}">音频加载失败，请重试</view>
+
+              <view class="q-title">{{levelState[challenge.id].current.prompt.question}}</view>
+
+              <view
+                wx:for="{{levelState[challenge.id].current.prompt.options}}"
+                wx:for-item="option"
+                wx:for-index="optIndex"
+                wx:key="*this"
+                class="option {{levelState[challenge.id].feedback && levelState[challenge.id].feedback.seq === levelState[challenge.id].current.seq && levelState[challenge.id].feedback.selected === option ? (levelState[challenge.id].feedback.correct ? 'option-correct' : 'option-wrong') : ''}} {{levelState[challenge.id].feedback && levelState[challenge.id].feedback.seq === levelState[challenge.id].current.seq && levelState[challenge.id].feedback.correctAnswer === option ? 'option-correct' : ''}}"
+                data-id="{{challenge.id}}"
+                data-seq="{{levelState[challenge.id].current.seq}}"
+                data-value="{{option}}"
+                bindtap="onPick"
+              >{{option}}</view>
+
+              <view class="explain" wx:if="{{levelState[challenge.id].feedback && levelState[challenge.id].feedback.seq === levelState[challenge.id].current.seq && levelState[challenge.id].feedback.explanation}}">
+                {{levelState[challenge.id].feedback.explanation}}
+              </view>
+            </block>
+            <!-- 后排仅景深骨架，不渲染真实题目 -->
+            <block wx:else>
+              <view class="ghost-line"></view>
+              <view class="ghost-line short"></view>
+            </block>
+          </view>
+        </view>
+
+        <!-- 尚未加载（骨架占位） -->
+        <view class="state-box" wx:else>
+          <view class="muted">上滑或下滑切换关卡</view>
+        </view>
+      </view>
+    </swiper-item>
+  </swiper>
 </view>

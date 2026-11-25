@@ -1,3 +1,20 @@
+.progress-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.progress-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+  margin-bottom: 20rpx;
+}
+
+.btn-go {
+  min-height: 80rpx;
+  line-height: 80rpx;
+}
+
 .calendar-entry {
   margin-top: 24rpx;
 }

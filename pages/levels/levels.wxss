@@ -5,12 +5,31 @@
   box-sizing: border-box;
 }
 
-.swiper-wrap {
-  flex: 1;
-  min-height: 0;
+.head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 16rpx 32rpx 8rpx;
+}
+
+.level-tag {
+  padding: 6rpx 20rpx;
+  border-radius: 999rpx;
+  background: var(--theme-color, #1677ff);
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.head-meta {
+  margin-left: 16rpx;
+  font-size: 24rpx;
+  color: #8a919f;
 }
 
 .card-swiper {
+  flex: 1;
+  min-height: 0;
   height: 100%;
 }
 
@@ -19,54 +38,242 @@
   height: 100%;
 }
 
-.day-card {
-  /* 全局 .card 自带 32rpx padding + 上下各 24rpx margin，必须按 border-box
-     计算并把 margin 扣掉，否则卡片比 swiper 容器高，底部按钮会被裁切。 */
+.slide {
   box-sizing: border-box;
-  height: calc(100% - 48rpx);
-  min-height: 0;
+  height: calc(100% - 32rpx);
+  margin: 16rpx 24rpx;
+  padding: 28rpx;
+  background: #fff;
+  border-radius: 24rpx;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
+  box-shadow: 0 6rpx 24rpx rgba(22, 119, 255, 0.06);
+  overflow: hidden;
 }
 
-.day-date {
-  font-size: 48rpx;
+.level-head {
+  flex-shrink: 0;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+
+.lh-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.lh-pos {
+  font-size: 36rpx;
   font-weight: 700;
   color: var(--theme-color, #1677ff);
-  margin-top: 8rpx;
 }
 
-.iso {
-  font-size: 24rpx;
-  margin-top: 4rpx;
-  margin-bottom: 24rpx;
-}
-
-.challenge-type {
-  align-self: flex-start;
-  padding: 8rpx 20rpx;
+.lh-type {
+  margin-left: 16rpx;
+  padding: 6rpx 16rpx;
   border-radius: 999rpx;
   background: #eef5ff;
   color: #0958d9;
+  font-size: 22rpx;
+}
+
+.lh-passed {
+  margin-left: auto;
+  color: #389e0d;
+  font-size: 22rpx;
+}
+
+.lh-sub {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #8a919f;
+}
+
+.state-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.lock-icon {
+  font-size: 88rpx;
+  margin-bottom: 24rpx;
+}
+
+.empty-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #4e5969;
+  text-align: center;
+}
+
+.empty-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 32rpx;
+}
+
+/* 3D 层叠卡片堆（§7.1.3） */
+.card-deck {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin-top: 24rpx;
+  perspective: 900px;
+  perspective-origin: 50% 42%;
+  transform-style: preserve-3d;
+}
+
+.stacked-card {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  background: #fff;
+  border: 1rpx solid #f0f1f3;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  box-shadow: 0 8rpx 28rpx rgba(22, 119, 255, 0.08);
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+  transition: transform .42s cubic-bezier(.22,.61,.36,1), opacity .42s ease;
+  backface-visibility: hidden;
+}
+
+.stacked-card.depth-0 { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+.stacked-card.depth-1 { transform: translate3d(0, 26rpx, -90px) scale(.94); opacity: .70; pointer-events: none; }
+.stacked-card.depth-2 { transform: translate3d(0, 52rpx, -180px) scale(.88); opacity: .42; pointer-events: none; }
+
+.q-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.q-kind {
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  background: #f5f7fa;
+  color: #86909c;
+  font-size: 22rpx;
+}
+
+.q-count {
+  margin-left: auto;
+  font-size: 24rpx;
+  color: #8a919f;
+}
+
+.q-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #1f2329;
+  margin-bottom: 24rpx;
+}
+
+.option {
+  padding: 22rpx 24rpx;
+  margin-bottom: 16rpx;
+  border-radius: 16rpx;
+  background: #f7f8fa;
+  border: 2rpx solid transparent;
+  font-size: 28rpx;
+  color: #1f2329;
+}
+
+.option-correct {
+  background: #f6ffed;
+  border-color: #52c41a;
+  color: #389e0d;
+}
+
+.option-wrong {
+  background: #fff1f0;
+  border-color: #ff4d4f;
+  color: #cf1322;
+}
+
+.explain {
+  margin-top: 12rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 12rpx;
+  background: #f5f7fa;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: #4e5969;
+}
+
+.audio-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 14rpx 20rpx;
+  margin-bottom: 20rpx;
+  border-radius: 12rpx;
+  background: #eef5ff;
+}
+
+.audio-btn {
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--theme-color, #1677ff);
+  color: #fff;
   font-size: 24rpx;
 }
 
-.challenge-title {
-  font-size: 34rpx;
-  font-weight: 600;
-  margin: 20rpx 0 8rpx;
+.audio-progress {
+  margin-left: 16rpx;
+  font-size: 22rpx;
+  color: #4e5969;
 }
 
-.stars {
-  margin-top: 24rpx;
-  color: #ad6800;
-  font-size: 30rpx;
+.audio-error {
+  color: #cf1322;
+  font-size: 22rpx;
+  margin-bottom: 12rpx;
+}
+
+/* 后排骨架占位线 */
+.ghost-line {
+  height: 28rpx;
+  border-radius: 8rpx;
+  background: #f0f1f3;
+  margin-bottom: 20rpx;
+}
+
+.ghost-line.short {
+  width: 60%;
+}
+
+/* 结算面板 */
+.result-box {
+  justify-content: flex-start;
+  padding-top: 40rpx;
+}
+
+.result-score {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.result-stars {
+  font-size: 72rpx;
+  font-weight: 800;
+  color: #faad14;
+  line-height: 1.3;
 }
 
 .checkin {
-  margin: 16rpx 0;
+  margin: 20rpx 0;
   font-size: 26rpx;
   color: #8a919f;
 }
@@ -75,21 +282,62 @@
   color: #389e0d;
 }
 
-.btn-primary {
-  margin-top: auto;
-  flex-shrink: 0;
-  min-height: 88rpx;
-  line-height: 88rpx;
+.tip-warn {
+  color: #d48806;
 }
 
-.empty-title {
+.submit-error {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: #cf1322;
+}
+
+.link {
+  margin-left: 12rpx;
+  color: var(--theme-color, #1677ff);
+  text-decoration: underline;
+}
+
+.result-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+  flex-shrink: 0;
+}
+
+.btn-ghost {
+  background: #f5f7fa;
+  color: #4e5969;
+  border-radius: 16rpx;
   font-size: 32rpx;
-  font-weight: 600;
-  padding: 48rpx 0;
+}
+
+.result-actions .btn-primary,
+.result-actions .btn-ghost {
+  flex: 1;
+  min-height: 88rpx;
+  line-height: 88rpx;
+  margin: 0;
+}
+
+.all-done {
+  flex: 1;
   text-align: center;
+  color: #389e0d;
+  font-size: 26rpx;
+  line-height: 88rpx;
 }
 
 .error {
   color: #d4380d;
   margin-bottom: 16rpx;
+  text-align: center;
+}
+
+.btn-primary {
+  margin-top: 24rpx;
+  flex-shrink: 0;
+  min-height: 88rpx;
+  line-height: 88rpx;
 }

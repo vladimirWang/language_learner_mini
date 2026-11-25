@@ -25,8 +25,19 @@ function setLevel(level) {
   notify()
 }
 
+// 只保留可公开的字段，杜绝 id/openid/unionid 等身份标识进入全局状态（§4.4）。
+const PUBLIC_USER_FIELDS = ['lang', 'level', 'nickname', 'avatar', 'is_new_user', 'total_stars']
+function publicUser(user) {
+  if (!user) return null
+  const out = {}
+  PUBLIC_USER_FIELDS.forEach((key) => {
+    if (user[key] !== undefined) out[key] = user[key]
+  })
+  return out
+}
+
 function setUser(user) {
-  const next = user || null
+  const next = publicUser(user)
   const level = (next && next.level) || state.level
   state = Object.assign({}, state, {
     user: next,

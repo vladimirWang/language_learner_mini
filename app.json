@@ -3,12 +3,10 @@
     "pages/levels/levels",
     "pages/calendar/calendar",
     "pages/tests/tests",
-    "pages/challenge/challenge",
-    "pages/result/result",
     "pages/mine/mine"
   ],
   "window": {
-    "navigationBarTitleText": "每日关卡",
+    "navigationBarTitleText": "德语闯关",
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#f6f7f9"

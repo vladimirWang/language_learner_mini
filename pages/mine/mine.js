@@ -1,5 +1,6 @@
-// 我的：微信资料、累计星星、学习偏好与连续签到。等级修改必须先持久化到后端。
-// 小程序当前只承载德语学习，等级只提供德语 CEFR 档位，不展示语种。
+// 我的：微信资料、通关进度、累计星星、连续签到与等级偏好。
+// 小程序当前只承载德语学习，等级只提供德语 CEFR 档位，不展示语种，也不展示用户 ID。
+// 累计星星与连续天数以 GET /api/levels 为准（§7.4），与关卡页保持一致。
 const api = require('../../utils/api.js')
 const session = require('../../utils/store/session.js')
 
@@ -20,6 +21,7 @@ Page({
     pendingAvatarPath: '',
     totalStars: 0,
     streak: { current: 0, longest: 0, last_day: '' },
+    progress: { total: 0, passed: 0, current: 1 },
     loading: true,
     saving: false,
     loadError: ''
@@ -51,21 +53,30 @@ Page({
     this.setData({ loading: true, loadError: '' })
     try {
       await api.ensureLogin()
-      const [me, streakData] = await Promise.all([
-        api.getMe(),
-        api.request('/api/levels/streak?lang=de').catch(() => null)
+      const lang = session.getState().lang
+      // 累计星星/连续天数/通关进度统一取 /api/levels（§6.1、§7.4）；
+      // /wx-me 只用于昵称与头像（资料失败不阻断其他内容）。
+      const [me, levelData] = await Promise.all([
+        api.getMe().catch(() => null),
+        api.request('/api/levels?lang=' + lang)
       ])
-      const user = (me && me.user) || null
+      const user = (me && me.user) || session.getState().user || null
       // getMe 内部已同步 store；这里同步一次页面显示，避免异步通知时序差异。
       this.applyState(session.getState())
+      const progress = (levelData && levelData.progress) || {}
       this.setData({
-        loggedIn: !!user,
+        loggedIn: !!user || !!api.getToken(),
         nickname: (user && user.nickname) || '微信用户',
         draftNickname: (user && user.nickname) || '',
         avatarPreview: (user && user.avatar) || '',
         pendingAvatarPath: '',
-        totalStars: (user && user.total_stars) || 0,
-        streak: (streakData && streakData.streak) || this.data.streak
+        totalStars: (levelData && levelData.total_stars) || 0,
+        streak: (levelData && levelData.streak) || this.data.streak,
+        progress: {
+          total: Number(progress.total) || 0,
+          passed: Number(progress.passed) || 0,
+          current: Number(progress.current) || 1
+        }
       })
     } catch (e) {
       this.setData({ loadError: e.message || '用户信息加载失败' })
@@ -131,6 +142,10 @@ Page({
 
   goCalendar() {
     wx.navigateTo({ url: '/pages/calendar/calendar' })
+  },
+
+  goLevels() {
+    wx.switchTab({ url: '/pages/levels/levels' })
   },
 
   async onLevelChange(e) {

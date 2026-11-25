@@ -19,6 +19,12 @@
     <view class="muted tip" wx:if="{{loadError}}">{{loadError}}</view>
   </view>
 
+  <view class="card progress-card">
+    <view class="section-title">通关进度</view>
+    <view class="progress-text">已通关 {{progress.passed}} / 共 {{progress.total}} · 当前第 {{progress.current}} 关</view>
+    <button class="btn-primary btn-go" bindtap="goLevels">去闯关</button>
+  </view>
+
   <view class="card">
     <view class="section-title">学习偏好</view>
     <view class="info-row">

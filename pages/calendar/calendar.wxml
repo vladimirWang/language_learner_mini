@@ -38,7 +38,7 @@
         <view
           wx:for="{{cells}}"
           wx:key="key"
-          class="cell {{item.checkedIn ? 'cell-passed' : ''}} {{item.day ? '' : 'cell-blank'}} {{selected && selected.date === item.date ? 'cell-selected' : ''}}"
+          class="cell {{item.checkedIn ? 'cell-passed' : ''}} {{item.day ? '' : 'cell-blank'}} {{selectedDate && selectedDate === item.date ? 'cell-selected' : ''}}"
           data-date="{{item.date}}"
           bindtap="onCellTap"
         >
@@ -49,13 +49,6 @@
       <view class="empty" wx:else>
         <view class="empty-title">本月暂无记录</view>
       </view>
-    </view>
-
-    <view class="card" wx:if="{{selected}}">
-      <view class="section-title">{{selected.date}} 成绩</view>
-      <view class="muted" wx:if="{{selected.title}}">{{selected.title}}</view>
-      <view class="muted">得分 {{selected.score}} / {{selected.total}} · 最新 {{selected.stars}} 星 · 最高 {{selected.bestStars}} 星</view>
-      <view class="muted">{{selected.checkedIn ? '已签到' : '未签到'}}</view>
     </view>
   </block>
 </view>
