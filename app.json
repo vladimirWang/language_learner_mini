@@ -3,6 +3,7 @@
     "pages/levels/levels",
     "pages/calendar/calendar",
     "pages/tests/tests",
+    "pages/testDetail/testDetail",
     "pages/mine/mine"
   ],
   "window": {

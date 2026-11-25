@@ -1,0 +1,59 @@
+.page {
+  padding-bottom: 40rpx;
+}
+
+.level-name {
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.summary-meta {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+}
+
+.description {
+  margin-top: 16rpx;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+.section-title {
+  margin: 32rpx 24rpx 0;
+  color: #4e5969;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.exam-item .exam-name {
+  flex: 1;
+  margin-right: 16rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.exam-meta {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+}
+
+.tag {
+  flex: none;
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  background: #eef5ff;
+  color: #0958d9;
+  font-size: 24rpx;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  padding: 24rpx 0;
+  text-align: center;
+}
+
+.error {
+  color: #d4380d;
+  margin-bottom: 16rpx;
+}

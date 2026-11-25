@@ -2,15 +2,25 @@
   padding-bottom: 40rpx;
 }
 
-.title {
-  font-size: 40rpx;
-  font-weight: 600;
-  margin-bottom: 8rpx;
+.test-item-hover {
+  background: #f7f9fc;
 }
 
 .test-item .name {
   font-size: 32rpx;
   font-weight: 600;
+}
+
+.item-right {
+  display: flex;
+  align-items: center;
+}
+
+.chevron {
+  margin-left: 12rpx;
+  color: #b0b6c0;
+  font-size: 36rpx;
+  line-height: 1;
 }
 
 .badge {

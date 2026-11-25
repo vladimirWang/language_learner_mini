@@ -28,6 +28,8 @@ let capturedRequests = []
 let capturedUploads = []
 let audioContexts = []
 let toasts = []
+let navigateCalls = []
+let navTitles = []
 let envVersion = 'release'
 
 global.wx = {
@@ -64,10 +66,11 @@ global.wx = {
   showToast(o) { toasts.push(o) },
   showModal() {},
   stopPullDownRefresh() {},
-  navigateTo() {},
+  navigateTo(o) { navigateCalls.push(o) },
   switchTab() {},
   reLaunch() {},
   redirectTo() {},
+  setNavigationBarTitle(o) { navTitles.push(o) },
   createInnerAudioContext() {
     const handlers = {}
     const ctx = {
@@ -103,6 +106,8 @@ function reset() {
   capturedUploads = []
   audioContexts = []
   toasts = []
+  navigateCalls = []
+  navTitles = []
   envVersion = 'release'
   session.clear()
 }
@@ -224,12 +229,13 @@ test('全局 store：初始状态、setUser/setLevel 不保存隐私字段、订
   assert.strictEqual(session.getState().level, 'A1')
 })
 
-test('app.json 注册四页、三 Tab，calendar 为二级页，tests 目录不进包', () => {
+test('app.json 注册五页、三 Tab，calendar/testDetail 为二级页，tests 目录不进包', () => {
   const app = JSON.parse(fs.readFileSync(path.join(__dirname, '../app.json'), 'utf8'))
   assert.deepStrictEqual(app.pages, [
     'pages/levels/levels',
     'pages/calendar/calendar',
     'pages/tests/tests',
+    'pages/testDetail/testDetail',
     'pages/mine/mine'
   ])
   assert.deepStrictEqual(app.tabBar.list.map((item) => item.pagePath), [
@@ -238,7 +244,7 @@ test('app.json 注册四页、三 Tab，calendar 为二级页，tests 目录不�
   const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../project.config.json'), 'utf8'))
   assert.ok(config.packOptions.ignore.some((item) => item.type === 'folder' && item.value === 'tests'))
   const pagesDir = fs.readdirSync(path.join(__dirname, '../pages'))
-  assert.deepStrictEqual(pagesDir.sort(), ['calendar', 'levels', 'mine', 'tests'])
+  assert.deepStrictEqual(pagesDir.sort(), ['calendar', 'levels', 'mine', 'testDetail', 'tests'])
 })
 
 // ---- 同步用例：关卡纯逻辑（新契约）----
@@ -917,6 +923,65 @@ atest('测试页调用 /api/tests 直接渲染 levels，不按用户等级过滤
   assert.ok(capturedRequests[0].url.indexOf('level=') === -1)
   assert.strictEqual(page.data.levels.length, 2)
   assert.strictEqual(page.data.levels[1].active, false)
+})
+
+atest('测试页移除说明卡片，点击列表项跳转测试详情', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_TESTS')
+  const def = loadPage('../pages/tests/tests.js')
+  const page = pageMock(def)
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/tests/tests.wxml'), 'utf8')
+  assert.ok(wxml.indexOf('<view class="title">测试配置</view>') === -1, '不应展示测试配置标题')
+  assert.ok(wxml.indexOf('以下为管理端配置') === -1, '不应展示管理端说明')
+  assert.ok(wxml.indexOf('bindtap="openDetail"') >= 0, '列表项应绑定 openDetail')
+  def.openDetail.call(page, { currentTarget: { dataset: { id: 2, name: 'a1 听力' } } })
+  assert.strictEqual(navigateCalls.length, 1)
+  assert.strictEqual(navigateCalls[0].url,
+    '/pages/testDetail/testDetail?id=2&name=' + encodeURIComponent('a1 听力'))
+})
+
+atest('测试详情页按 id 拉取 /api/tests/:id 并按 sort_order 展示任务', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_TESTS')
+  const def = loadPage('../pages/testDetail/testDetail.js')
+  const page = pageMock(def)
+  page.data.id = '7'
+  requestQueue.push({ statusCode: 200, data: {
+    level: { id: 7, name: 'a1听力', lang: 'de', difficulty: 'A1', description: '德语听力' },
+    exams: [
+      { exam_id: 'e2', item_type: 'speaking', name: '口语二', lang: 'de', sort_order: 2 },
+      { exam_id: 'e1', item_type: 'listening', name: '', lang: 'de', sort_order: 1 }
+    ]
+  } })
+  await def.load.call(page)
+  assert.strictEqual(capturedRequests[capturedRequests.length - 1].url, api.BASE_URL + '/api/tests/7')
+  assert.strictEqual(page.data.level.name, 'a1听力')
+  assert.strictEqual(page.data.exams.length, 2)
+  assert.strictEqual(page.data.exams[0].name, 'e1', '无名称时回退 exam_id')
+  assert.strictEqual(page.data.exams[0].typeLabel, '听力')
+  assert.strictEqual(page.data.exams[1].typeLabel, '口语')
+})
+
+atest('测试详情页 onLoad 写入 id 并用名称设置标题', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_TESTS')
+  const def = loadPage('../pages/testDetail/testDetail.js')
+  const page = pageMock(def)
+  requestQueue.push({ statusCode: 200, data: { level: { name: 'a1 听力' }, exams: [] } })
+  def.onLoad.call(page, { id: '3', name: encodeURIComponent('a1 听力') })
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  assert.strictEqual(page.data.id, '3')
+  assert.strictEqual(navTitles[0].title, 'a1 听力')
+})
+
+atest('测试详情页缺少 id 时提示且不发起请求', async () => {
+  reset()
+  const def = loadPage('../pages/testDetail/testDetail.js')
+  const page = pageMock(def)
+  await def.load.call(page)
+  assert.strictEqual(page.data.loading, false)
+  assert.strictEqual(page.data.error, '测试参数缺失')
+  assert.strictEqual(capturedRequests.length, 0)
 })
 
 ;(async () => {

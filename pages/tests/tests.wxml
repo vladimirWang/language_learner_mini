@@ -1,9 +1,4 @@
 <view class="page">
-  <view class="card">
-    <view class="title">测试配置</view>
-    <view class="muted">以下为管理端配置的测试列表，与每日关卡无关</view>
-  </view>
-
   <view class="card" wx:if="{{loading}}">
     <view class="muted">加载中…</view>
   </view>
@@ -18,11 +13,16 @@
       <view class="empty-title">暂无测试配置</view>
     </view>
 
-    <view class="card test-item" wx:for="{{levels}}" wx:key="id">
+    <view class="card test-item" wx:for="{{levels}}" wx:key="id"
+          hover-class="test-item-hover" data-id="{{item.id}}" data-name="{{item.name}}"
+          bindtap="openDetail">
       <view class="row">
         <view class="name">{{item.name}}</view>
-        <view class="badge {{item.active ? 'badge-active' : 'badge-inactive'}}">
-          {{item.active ? '已生效' : '未生效'}}
+        <view class="item-right">
+          <view class="badge {{item.active ? 'badge-active' : 'badge-inactive'}}">
+            {{item.active ? '已生效' : '未生效'}}
+          </view>
+          <text class="chevron">›</text>
         </view>
       </view>
       <view class="meta">
