@@ -1,19 +1,18 @@
 // 我的：微信资料、累计星星、学习偏好与连续签到。等级修改必须先持久化到后端。
+// 小程序当前只承载德语学习，等级只提供德语 CEFR 档位，不展示语种。
 const api = require('../../utils/api.js')
 const session = require('../../utils/store/session.js')
 
-const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'N1', 'N2', 'N3', 'N4', 'N5']
+const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 const AVATAR_EXT = /\.(jpe?g|png|webp)$/i
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024
 
 Page({
   data: {
     loggedIn: false,
-    lang: 'de',
     level: 'A1',
     levels: LEVELS,
     levelIndex: 0,
-    userId: 0,
     user: null,
     nickname: '微信用户',
     draftNickname: '',
@@ -42,10 +41,8 @@ Page({
   applyState(state) {
     this.setData({
       loggedIn: !!state.user,
-      lang: state.lang,
       level: state.level,
       levelIndex: Math.max(0, LEVELS.indexOf(state.level)),
-      userId: state.userId,
       user: state.user
     })
   },

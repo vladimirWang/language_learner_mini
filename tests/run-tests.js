@@ -158,16 +158,16 @@ test('getToken/clearToken 读写 wx_token', () => {
 test('全局 store：初始状态、setUser/setLevel、订阅可取消、clear', () => {
   reset()
   assert.deepStrictEqual(session.getState(), {
-    lang: 'de', level: 'A1', userId: 0, openid: '', user: null, ready: false
+    lang: 'de', level: 'A1', user: null, ready: false
   })
   let notifications = 0
   const unsubscribe = session.subscribe(() => { notifications += 1 })
   session.setLevel('B1')
   assert.strictEqual(session.getState().level, 'B1')
   assert.strictEqual(notifications, 1)
-  session.setUser({ id: 7, openid: 'openid-7', level: 'A2', nickname: 'Anna' })
-  assert.strictEqual(session.getState().userId, 7)
-  assert.strictEqual(session.getState().openid, 'openid-7')
+  session.setUser({ level: 'A2', nickname: 'Anna' })
+  assert.strictEqual(session.getState().userId, undefined)
+  assert.strictEqual(session.getState().openid, undefined)
   assert.strictEqual(session.getState().level, 'A2')
   assert.strictEqual(session.getState().ready, true)
   assert.strictEqual(notifications, 2)
@@ -230,11 +230,10 @@ atest('login 存 token 并用服务端 user 覆盖 store', async () => {
   loginCode = 'CODE_OK'
   requestQueue.push({
     statusCode: 200,
-    data: { token: 'LOGIN_TOKEN', user: { id: 7, openid: 'o7', level: 'A2' } }
+    data: { token: 'LOGIN_TOKEN', user: { level: 'A2' } }
   })
   await api.login()
   assert.strictEqual(api.getToken(), 'LOGIN_TOKEN')
-  assert.strictEqual(session.getState().userId, 7)
   assert.strictEqual(session.getState().level, 'A2')
   const t = await api.ensureLogin()
   assert.strictEqual(t, 'LOGIN_TOKEN')
@@ -248,7 +247,7 @@ atest('401：清 token → 重登 → 重试一次成功，新 user 同步 store
   requestQueue.push({ statusCode: 401, data: { error: 'login expired' } })
   requestQueue.push({
     statusCode: 200,
-    data: { token: 'FRESH', user: { id: 9, openid: 'o9', level: 'B1' } }
+    data: { token: 'FRESH', user: { level: 'B1' } }
   })
   requestQueue.push({ statusCode: 200, data: { ok: true } })
   const data = await api.request('/api/levels/today')
@@ -337,11 +336,11 @@ atest('uploadAvatar：multipart 字段、Bearer、10 秒超时及 JSON 解析', 
   wx.setStorageSync('wx_token', 'TOKEN_UPLOAD')
   uploadQueue.push({
     statusCode: 200,
-    data: JSON.stringify({ user: { id: 4, avatar: 'https://signed/avatar.jpg' } })
+    data: JSON.stringify({ user: { avatar: 'https://signed/avatar.jpg' } })
   })
   const data = await api.uploadAvatar('/tmp/avatar.jpg')
   assert.strictEqual(data.user.avatar, 'https://signed/avatar.jpg')
-  assert.strictEqual(session.getState().userId, 4)
+  assert.strictEqual(session.getState().userId, undefined)
   assert.strictEqual(capturedUploads[0].name, 'avatar')
   assert.strictEqual(capturedUploads[0].filePath, '/tmp/avatar.jpg')
   assert.strictEqual(capturedUploads[0].header.Authorization, 'Bearer TOKEN_UPLOAD')

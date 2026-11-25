@@ -60,10 +60,6 @@
   line-height: 52rpx;
 }
 
-.user-id {
-  font-size: 22rpx;
-}
-
 .total-stars {
   margin-left: 20rpx;
   text-align: center;
@@ -97,11 +93,6 @@
   align-items: center;
   padding: 14rpx 0;
   border-bottom: 1rpx solid #f2f3f5;
-}
-
-.info-value {
-  font-size: 28rpx;
-  color: #1f2329;
 }
 
 .level-picker {

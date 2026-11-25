@@ -9,7 +9,6 @@
         <input wx:if="{{loggedIn}}" class="name name-input" type="nickname" value="{{draftNickname}}" placeholder="微信用户" maxlength="64" bindinput="onNicknameInput" />
         <view wx:else class="name">未登录</view>
         <view class="muted">{{loggedIn ? nickname : '进入关卡将自动登录'}}</view>
-        <view class="muted user-id" wx:if="{{userId}}">用户 ID：{{userId}}</view>
       </view>
       <view class="total-stars">
         <view class="star-number">{{totalStars}}</view>
@@ -22,10 +21,6 @@
 
   <view class="card">
     <view class="section-title">学习偏好</view>
-    <view class="info-row">
-      <text class="muted">语种</text>
-      <text class="info-value">德语</text>
-    </view>
     <view class="info-row">
       <text class="muted">等级</text>
       <picker mode="selector" range="{{levels}}" value="{{levelIndex}}" bindchange="onLevelChange" disabled="{{!loggedIn}}">

@@ -2,7 +2,7 @@
 // 方案 §4.4：初始状态固定为 de/A1；服务端 user 的 level 才是权威值。
 
 function initialState() {
-  return { lang: 'de', level: 'A1', userId: 0, openid: '', user: null, ready: false }
+  return { lang: 'de', level: 'A1', user: null, ready: false }
 }
 
 let state = initialState()
@@ -29,8 +29,6 @@ function setUser(user) {
   const next = user || null
   const level = (next && next.level) || state.level
   state = Object.assign({}, state, {
-    userId: next ? (next.id || 0) : 0,
-    openid: next ? (next.openid || '') : '',
     user: next,
     level: level,
     ready: true
