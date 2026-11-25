@@ -6,6 +6,7 @@ const session = require('../../utils/store/session')
 
 const TYPE_LABELS = { vocab: '单词与搭配', grammar: '语法', listening: '听力' }
 const KIND_LABELS = { word: '单词', collocation: '固定搭配', grammar: '语法', listening: '听力' }
+const AUDIO_ZERO_PROGRESS = '0:00 / 0:00'
 
 // 反馈停留时长与飞卡动画时长（§7.1.5 / §7.1.6）
 const FEEDBACK_MS = 600
@@ -38,6 +39,27 @@ function estimateStars(score, total) {
 function typeLabel(challenge) {
   const value = challenge && challenge.challenge_type
   return TYPE_LABELS[value] || TYPE_LABELS.vocab
+}
+
+/** 秒数转 m:ss；未知时长按 0:00 展示。 */
+function formatDuration(seconds) {
+  const value = Number(seconds)
+  if (!Number.isFinite(value) || value < 0) return '0:00'
+  const total = Math.floor(value)
+  return Math.floor(total / 60) + ':' + String(total % 60).padStart(2, '0')
+}
+
+/** 音频进度文本：当前位置 / 总时长。 */
+function audioTimeText(current, duration) {
+  return formatDuration(current) + ' / ' + formatDuration(duration)
+}
+
+/** 进度条百分比；总时长未知时为 0。 */
+function audioPercentOf(current, duration) {
+  const total = Number(duration) || 0
+  if (total <= 0) return 0
+  const percent = Math.round((Number(current) || 0) / total * 100)
+  return Math.min(100, Math.max(0, percent))
 }
 
 /** 随机 3D 飞卡变换：Z 分量恒为负（向屏幕深处），带随机漂移/旋转/缩小（§7.1.6）。 */
@@ -74,6 +96,9 @@ function buildItems(detail, attempt) {
     const audioUrl = item.audio && item.audio.url
       ? api.getBaseUrl() + item.audio.url
       : ''
+    const imageUrl = item.image && item.image.url
+      ? api.getBaseUrl() + item.image.url
+      : ''
     return {
       seq: item.seq,
       kind: item.kind,
@@ -85,7 +110,8 @@ function buildItems(detail, attempt) {
       answered: !!selected,
       correct: selected ? isCorrect(selected, item.correct_answer) : false,
       audioUrl: audioUrl,
-      audioDuration: (item.audio && item.audio.duration) || 0
+      audioDuration: (item.audio && item.audio.duration) || 0,
+      imageUrl: imageUrl
     }
   })
   const found = items.findIndex((it) => !it.answered)
@@ -127,6 +153,7 @@ Page({
     challenges: [],
     currentIndex: 0,
     levelState: {},
+    reviewing: null,
     swiperDisabled: false,
     loading: true,
     error: ''
@@ -140,7 +167,7 @@ Page({
       if (next.level !== this.data.level) {
         this.clearTimers()
         this.stopAudio()
-        this.setData({ levelState: {} }, () => this.load())
+        this.setData({ levelState: {}, reviewing: null }, () => this.load())
       }
     })
   },
@@ -186,7 +213,7 @@ Page({
   /** 拉序列（§6.1）；refresh 时清空按关缓存。首次定位 progress.current。 */
   async load(refresh) {
     this.setData({ loading: true, error: '' })
-    if (refresh === true) this.setData({ levelState: {} })
+    if (refresh === true) this.setData({ levelState: {}, reviewing: null })
     try {
       await api.ensureLogin()
       const lang = session.getState().lang
@@ -248,12 +275,15 @@ Page({
         stack: buildStack(items, cursor),
         flying: false,
         feedback: null,
+        awaitingConfirm: false,
         submitting: false,
         submitError: '',
         result: allAnswered ? resultPanel(attempt, { challengeId: id }) : null,
         playingSeq: 0,
+        pausedSeq: 0,
         audioErrorSeq: 0,
-        audioProgress: '0:00 / 0:00'
+        audioProgress: audioTimeText(0, items[0] ? items[0].audioDuration : 0),
+        audioPercent: 0
       }
       this.setData({ ['levelState.' + id]: withCurrent(st) })
     } catch (error) {
@@ -280,23 +310,24 @@ Page({
     this.ensureLoaded(index)
   },
 
-  /** 选项点击：本地即时判定 → 反馈 → 飞卡 → 推进/提交（§7.1.5 / §7.1.6）。 */
+  /** 选项点击：本地即时判定 → 反馈；听力题停住等用户确认，其余自动飞卡推进。 */
   onPick(e) {
     if (this.data.swiperDisabled) return
     const id = Number(e.currentTarget.dataset.id)
     const seq = Number(e.currentTarget.dataset.seq)
     const st = this.state(id)
-    if (!st || st.flying || st.submitting || st.result) return
+    if (!st || st.flying || st.submitting || st.result || st.awaitingConfirm) return
     const item = (st.items || []).find((it) => it.seq === seq)
     if (!item || item.answered) return
 
     // value 为选项完整文本（§6.3）；本地按归一化规则即时判定，无网络请求。
     const value = e.currentTarget.dataset.value || ''
     const right = isCorrect(value, item.correctAnswer)
+    const isListening = item.kind === 'listening'
     this.setData({
       swiperDisabled: true,
       ['levelState.' + id]: Object.assign({}, st, {
-        flying: true,
+        flying: !isListening,
         feedback: {
           seq: seq,
           selected: value,
@@ -314,6 +345,18 @@ Page({
       const items = (cur.items || []).map((it) => it.seq === seq
         ? Object.assign({}, it, { selected: value, answered: true, correct: right })
         : it)
+      if (isListening) {
+        // 听力题：展示答案后停住，等用户点「确认，下一题 / 确认，提交」
+        this.setData({
+          ['levelState.' + id]: withCurrent(Object.assign({}, cur, {
+            items: items,
+            flying: false,
+            awaitingConfirm: true,
+            stack: buildStack(items, cur.cursor)
+          }))
+        })
+        return
+      }
       const fly = makeFlyTransform()
       // 顶层（当前题）执行飞走动画，cursor 此刻不变；420ms 后才推进。
       const stack = buildStack(items, cur.cursor, fly)
@@ -324,6 +367,22 @@ Page({
     }, FEEDBACK_MS)
   },
 
+  /** 听力题用户确认：执行飞卡动画后推进下一题 / 提交。 */
+  confirmNext(e) {
+    const id = Number(e.currentTarget.dataset.id)
+    const st = this.state(id)
+    if (!st || !st.awaitingConfirm || st.flying || st.submitting || st.result) return
+    const fly = makeFlyTransform()
+    this.setData({
+      ['levelState.' + id]: withCurrent(Object.assign({}, st, {
+        flying: true,
+        awaitingConfirm: false,
+        stack: buildStack(st.items, st.cursor, fly)
+      }))
+    })
+    this.later(() => this.advance(id), FLY_MS)
+  },
+
   /** 飞走动画结束：上升一档、插入下一题；末题则自动提交一次。 */
   advance(id) {
     const st = this.state(id)
@@ -331,10 +390,20 @@ Page({
     this.stopAudio()
     const answeredCount = (st.answeredCount || 0) + 1
     const cursor = st.cursor + 1
+    const nextItem = (st.items || [])[cursor]
+    // 切题必须重置播放器：音频绑定下一题、进度归零，不沿用上一题的位置。
+    const audioReset = {
+      playingSeq: 0,
+      pausedSeq: 0,
+      audioErrorSeq: 0,
+      audioProgress: audioTimeText(0, nextItem ? nextItem.audioDuration : 0),
+      audioPercent: 0,
+      awaitingConfirm: false
+    }
     if (cursor >= (st.total || st.items.length)) {
       this.setData({
         swiperDisabled: false,
-        ['levelState.' + id]: withCurrent(Object.assign({}, st, {
+        ['levelState.' + id]: withCurrent(Object.assign({}, st, audioReset, {
           answeredCount: answeredCount, cursor: cursor, flying: false,
           stack: buildStack(st.items, cursor)
         }))
@@ -344,7 +413,7 @@ Page({
     }
     this.setData({
       swiperDisabled: false,
-      ['levelState.' + id]: withCurrent(Object.assign({}, st, {
+      ['levelState.' + id]: withCurrent(Object.assign({}, st, audioReset, {
         answeredCount: answeredCount,
         cursor: cursor,
         flying: false,
@@ -432,11 +501,41 @@ Page({
     this.setData({
       ['levelState.' + id]: withCurrent(Object.assign({}, st, {
         items: items, cursor: 0, answeredCount: 0, stack: buildStack(items, 0),
-        flying: false, feedback: null, result: null, submitError: '',
-        playingSeq: 0, audioErrorSeq: 0, audioProgress: '0:00 / 0:00'
+        flying: false, feedback: null, awaitingConfirm: false, result: null, submitError: '',
+        playingSeq: 0, pausedSeq: 0, audioErrorSeq: 0,
+        audioProgress: audioTimeText(0, items[0] ? items[0].audioDuration : 0),
+        audioPercent: 0
       }))
     })
     this.stopAudio()
+  },
+
+  /** 打开已完成关卡的只读回顾：展示全部题目、你的答案与正确答案。 */
+  openReview(e) {
+    const id = Number(e.currentTarget.dataset.id)
+    const st = this.state(id)
+    if (!st || !st.items || !st.items.length) return
+    this.stopAudio()
+    const challenge = (this.data.challenges || []).find((item) => item.id === id)
+    const result = st.result
+    const items = (st.items || []).map((item) => Object.assign({}, item, {
+      reviewStatus: item.selected ? (item.correct ? '✓ 正确' : '✗ 错误') : '未作答',
+      reviewStatusClass: item.selected ? (item.correct ? 'is-good' : 'is-bad') : 'is-muted'
+    }))
+    this.setData({
+      reviewing: {
+        id: id,
+        title: challenge ? '第 ' + challenge.position + ' 关 · ' + typeLabel(challenge) : '关卡回顾',
+        summary: result
+          ? '得分 ' + result.score + '/' + result.total + ' · 最高 ' + result.bestStars + ' 星'
+          : '',
+        items: items
+      }
+    })
+  },
+
+  closeReview() {
+    this.setData({ reviewing: null })
   },
 
   goNext(e) {
@@ -465,23 +564,61 @@ Page({
     this.load(true)
   },
 
-  // ---- 听力播放器：同一时刻只播一个，切题/切关/离开都销毁（§7.1.4 / C-02）----
+  // ---- 听力播放器：同一时刻只播一个；暂停保留实例与位置，切题/切关/离开才销毁 ----
+  /** 彻底销毁播放器并清零进度（切题、切关、再答一次、离开页面时调用）。 */
   stopAudio() {
     if (this.audio) {
       try { this.audio.stop() } catch (e) { /* 忽略已停止 */ }
       try { this.audio.destroy() } catch (e) { /* 忽略已销毁 */ }
       this.audio = null
     }
+    this.audioSeq = 0
+    this.pausedTime = 0
+    this._audioStarting = false
     const index = this.data.currentIndex
     const challenge = this.data.challenges[index]
     if (challenge) {
       const st = this.state(challenge.id)
-      if (st && (st.playingSeq || st.audioErrorSeq)) {
-        this.patch(challenge.id, { playingSeq: 0, audioErrorSeq: 0, audioProgress: '0:00 / 0:00' })
+      if (st && (st.playingSeq || st.pausedSeq || st.audioErrorSeq)) {
+        const currentItem = st.current
+        this.patch(challenge.id, {
+          playingSeq: 0,
+          pausedSeq: 0,
+          audioErrorSeq: 0,
+          audioProgress: audioTimeText(0, currentItem ? currentItem.audioDuration : 0),
+          audioPercent: 0
+        })
       }
     }
   },
 
+  /** 更新当前关卡音频进度（文本 + 进度条），未知时长时进度条为 0。 */
+  patchAudioProgress(id, currentTime, duration, fallbackDuration) {
+    const st = this.state(id)
+    if (!st || (st.playingSeq === 0 && !this._audioStarting)) return
+    const effectiveDuration = Number(duration) > 0
+      ? Number(duration)
+      : (Number(st.current && st.current.audioDuration) || Number(fallbackDuration) || 0)
+    this.patch(id, {
+      audioProgress: audioTimeText(currentTime, effectiveDuration),
+      audioPercent: audioPercentOf(currentTime, effectiveDuration)
+    })
+  },
+
+  previewImage(e) {
+    const url = e.currentTarget.dataset.url
+    if (!url) return
+    wx.previewImage({ current: url, urls: [url] })
+  },
+
+  /** 停止播放并回到开头：播放中与暂停中都展示停止按钮。 */
+  stopAudioTap(e) {
+    const id = Number(e.currentTarget.dataset.id)
+    if (!this.state(id)) return
+    this.stopAudio()
+  },
+
+  /** 播放 / 暂停 / 续播：暂停只调用 ctx.pause() 保留位置，续播复用同一实例。 */
   toggleAudio(e) {
     const id = Number(e.currentTarget.dataset.id)
     const seq = Number(e.currentTarget.dataset.seq)
@@ -489,28 +626,106 @@ Page({
     if (!st) return
     const item = (st.items || []).find((it) => it.seq === seq)
     if (!item || !item.audioUrl) return
-    if (st.playingSeq === seq) {
-      this.stopAudio()
+
+    // 播放中 → 暂停：记录位置，不销毁实例（onPause 也会记录，双保险）
+    if (st.playingSeq === seq && this.audio && this.audioSeq === seq) {
+      const ctx = this.audio
+      this.pausedTime = Number(ctx.currentTime) || this.pausedTime || 0
+      try { ctx.pause() } catch (err) { /* 忽略 */ }
+      this.patch(id, { playingSeq: 0, pausedSeq: seq })
       return
     }
+
+    // 暂停中 → 续播：复用实例，从暂停位置继续，不重新从头播放
+    if (st.pausedSeq === seq && this.audio && this.audioSeq === seq) {
+      const ctx = this.audio
+      const pos = Number(this.pausedTime) || 0
+      const duration = Number(ctx.duration) || Number(item.audioDuration) || 0
+      this._audioStarting = false
+      this.patch(id, {
+        playingSeq: seq,
+        pausedSeq: 0,
+        audioProgress: audioTimeText(pos, duration),
+        audioPercent: audioPercentOf(pos, duration)
+      })
+      try {
+        if (pos > 0 && typeof ctx.seek === 'function') ctx.seek(pos)
+      } catch (err) { /* 忽略 seek 失败 */ }
+      try { ctx.play() } catch (err) { /* 忽略 */ }
+      return
+    }
+
+    // 其他情况（首次播放 / 换题 / 曾出错）：销毁旧实例后新建
     this.stopAudio()
+    this._audioStarting = true
+    this.audioSeq = seq
+    this.pausedTime = 0
     const ctx = wx.createInnerAudioContext()
     this.audio = ctx
     ctx.src = item.audioUrl
     ctx.obeyMuteSwitch = false
-    this.patch(id, { playingSeq: seq, audioErrorSeq: 0, audioProgress: '0:00 / 0:00' })
-    ctx.onPlay(() => { if (this.audio === ctx) this.patch(id, { playingSeq: seq }) })
-    ctx.onPause(() => { if (this.audio === ctx) this.patch(id, { playingSeq: 0 }) })
-    ctx.onStop(() => { if (this.audio === ctx) this.patch(id, { playingSeq: 0 }) })
+    this.patch(id, {
+      playingSeq: seq,
+      pausedSeq: 0,
+      audioErrorSeq: 0,
+      audioProgress: audioTimeText(0, item.audioDuration),
+      audioPercent: 0
+    })
+    ctx.onCanplay(() => {
+      if (this.audio !== ctx) return
+      const duration = Number(ctx.duration) || Number(item.audioDuration) || 0
+      this.patch(id, {
+        audioProgress: audioTimeText(Number(ctx.currentTime) || 0, duration),
+        audioPercent: audioPercentOf(ctx.currentTime, duration)
+      })
+    })
+    ctx.onPlay(() => {
+      if (this.audio !== ctx) return
+      this._audioStarting = false
+      this.patch(id, { playingSeq: seq, pausedSeq: 0 })
+    })
+    ctx.onPause(() => {
+      if (this.audio !== ctx) return
+      this._audioStarting = false
+      this.pausedTime = Number(ctx.currentTime) || this.pausedTime || 0
+      this.patch(id, { playingSeq: 0, pausedSeq: seq })
+    })
+    ctx.onStop(() => {
+      if (this.audio !== ctx) return
+      this._audioStarting = false
+      this.pausedTime = 0
+      this.patch(id, { playingSeq: 0, pausedSeq: 0 })
+    })
+    ctx.onTimeUpdate(() => {
+      if (this.audio !== ctx) return
+      this.patchAudioProgress(id, ctx.currentTime, ctx.duration, item.audioDuration)
+    })
     ctx.onEnded(() => {
       if (this.audio !== ctx) return
-      this.patch(id, { playingSeq: 0 })
+      this._audioStarting = false
+      this.pausedTime = 0
+      const duration = Number(ctx.duration) || Number(item.audioDuration) || 0
+      this.patch(id, {
+        playingSeq: 0,
+        pausedSeq: 0,
+        audioProgress: audioTimeText(duration, duration),
+        audioPercent: 100
+      })
     })
     ctx.onError(() => {
       if (this.audio !== ctx) return
-      this.patch(id, { playingSeq: 0, audioErrorSeq: seq, audioProgress: '0:00 / 0:00' })
+      this._audioStarting = false
+      this.pausedTime = 0
+      this.patch(id, {
+        playingSeq: 0,
+        pausedSeq: 0,
+        audioErrorSeq: seq,
+        audioProgress: audioTimeText(0, item.audioDuration),
+        audioPercent: 0
+      })
       try { ctx.destroy() } catch (err) { /* 忽略 */ }
       this.audio = null
+      this.audioSeq = 0
     })
     ctx.play()
   }
@@ -533,5 +748,8 @@ module.exports = {
   makeFlyTransform: makeFlyTransform,
   buildStack: buildStack,
   buildItems: buildItems,
-  resultPanel: resultPanel
+  resultPanel: resultPanel,
+  formatDuration: formatDuration,
+  audioTimeText: audioTimeText,
+  audioPercentOf: audioPercentOf
 }

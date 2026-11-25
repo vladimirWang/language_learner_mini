@@ -29,8 +29,9 @@
   <block wx:else>
     <view class="card">
       <view class="month-nav">
-        <button class="btn-nav" bindtap="prevMonth">上一月</button>
-        <button class="btn-nav" bindtap="nextMonth" disabled="{{!canGoNext}}">下一月</button>
+        <view class="nav-arrow" bindtap="prevMonth" aria-label="前一月">◀</view>
+        <view class="nav-month">{{monthLabel}}</view>
+        <view class="nav-arrow {{canGoNext ? '' : 'nav-arrow-disabled'}}" bindtap="nextMonth" aria-label="后一月">▶</view>
       </view>
 
       <view class="calendar" wx:if="{{!empty}}">

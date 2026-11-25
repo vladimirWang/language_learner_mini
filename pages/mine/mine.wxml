@@ -33,7 +33,6 @@
         <view class="level-picker">{{level}} ▾</view>
       </picker>
     </view>
-    <view class="muted tip">修改等级会保存到服务器，关卡与日历将按新等级刷新</view>
   </view>
 
   <view class="card calendar-entry" bindtap="goCalendar">

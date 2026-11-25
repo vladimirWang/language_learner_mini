@@ -1,7 +1,7 @@
 // 每日关卡小程序契约测试：Node 直接运行，mock 微信运行时。
 // 运行：node tests/run-tests.js
 // 覆盖：新契约 GET /api/levels 序列、GET /api/levels/:id 详情含答案、POST /:id/submit、
-//       本地判定归一化、飞卡 3D、日历 days 高亮、attempt 恢复、401 重试、503、
+//       本地判定归一化、飞卡 3D、日历 days 高亮、attempt 恢复、已完成关卡回顾、401 重试、503、
 //       隐私字段不下发、单页注册与测试目录排除。
 const assert = require('assert')
 const fs = require('fs')
@@ -26,6 +26,8 @@ let loginCode = 'mock-code'
 let loginCalls = 0
 let capturedRequests = []
 let capturedUploads = []
+let audioContexts = []
+let toasts = []
 let envVersion = 'release'
 
 global.wx = {
@@ -59,7 +61,7 @@ global.wx = {
       }
     }, 0)
   },
-  showToast() {},
+  showToast(o) { toasts.push(o) },
   showModal() {},
   stopPullDownRefresh() {},
   navigateTo() {},
@@ -67,11 +69,24 @@ global.wx = {
   reLaunch() {},
   redirectTo() {},
   createInnerAudioContext() {
-    return {
-      src: '', obeyMuteSwitch: true,
-      play() {}, stop() {}, destroy() {},
-      onCanplay() {}, onPlay() {}, onPause() {}, onStop() {}, onEnded() {}, onTimeUpdate() {}, onError() {}
+    const handlers = {}
+    const ctx = {
+      src: '', obeyMuteSwitch: true, currentTime: 0, duration: 0,
+      play() { this.playCount = (this.playCount || 0) + 1; this.paused = false },
+      pause() { this.paused = true },
+      seek(t) { this.currentTime = t; this.seekedTo = t },
+      stop() {}, destroy() {},
+      onCanplay(fn) { handlers.canplay = fn },
+      onPlay(fn) { handlers.play = fn },
+      onPause(fn) { handlers.pause = fn },
+      onStop(fn) { handlers.stop = fn },
+      onEnded(fn) { handlers.ended = fn },
+      onTimeUpdate(fn) { handlers.timeupdate = fn },
+      onError(fn) { handlers.error = fn },
+      emit(name) { handlers[name] && handlers[name]() }
     }
+    audioContexts.push(ctx)
+    return ctx
   },
   getFileInfo(o) { o && o.success && o.success({ size: 1024 }) }
 }
@@ -86,6 +101,8 @@ function reset() {
   loginCalls = 0
   capturedRequests = []
   capturedUploads = []
+  audioContexts = []
+  toasts = []
   envVersion = 'release'
   session.clear()
 }
@@ -277,7 +294,8 @@ test('详情构建 buildItems：含答案/解析、按 attempt 预置、定位�
       { seq: 1, kind: 'word', prompt: { options: ['树', '窗'] }, correct_answer: '树', explanation: 'Baum=树' },
       { seq: 2, kind: 'grammar', prompt: { options: ['A', 'B'] }, correct_answer: 'A' },
       { seq: 3, kind: 'listening', prompt: { options: ['X', 'Y'] }, correct_answer: 'Y',
-        audio: { url: '/api/levels/audio/9?exp=1&sig=s', duration: 12.8 } }
+        audio: { url: '/api/levels/audio/9?exp=1&sig=s', duration: 12.8 },
+        image: { url: '/api/levels/image/9?exp=1&sig=i' } }
     ]
   }
   const built = def.buildItems(detail, { answers: [{ seq: 1, value: '树' }] })
@@ -288,6 +306,40 @@ test('详情构建 buildItems：含答案/解析、按 attempt 预置、定位�
   assert.strictEqual(built.items[0].explanation, 'Baum=树')
   assert.strictEqual(built.cursor, 1, '定位首个未答题')
   assert.strictEqual(built.items[2].audioUrl, api.BASE_URL + '/api/levels/audio/9?exp=1&sig=s')
+  assert.strictEqual(built.items[2].imageUrl, api.BASE_URL + '/api/levels/image/9?exp=1&sig=i')
+})
+
+test('音频进度 formatDuration/audioTimeText：秒转 m:ss 并拼接当前/总时长', () => {
+  const def = loadPage('../pages/levels/levels.js')
+  assert.strictEqual(def.formatDuration(0), '0:00')
+  assert.strictEqual(def.formatDuration(9.9), '0:09')
+  assert.strictEqual(def.formatDuration(75), '1:15')
+  assert.strictEqual(def.formatDuration('bad'), '0:00')
+  assert.strictEqual(def.audioTimeText(5, 12.8), '0:05 / 0:12')
+  assert.strictEqual(def.audioTimeText(0, 0), '0:00 / 0:00')
+})
+
+test('音频播放器：播放/暂停图标、进度文本与进度条由 InnerAudioContext 事件驱动', () => {
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxss'), 'utf8')
+  assert.ok(wxml.indexOf("'⏸' : '▶'") >= 0 || wxml.indexOf('⏸') >= 0)
+  assert.ok(wxml.indexOf('audio-fill') >= 0)
+  assert.ok(wxml.indexOf('audio-dot') >= 0)
+  assert.ok(wxml.indexOf('audioPercent') >= 0)
+  assert.ok(wxss.indexOf('.audio-dot') >= 0 && wxss.indexOf('border-radius: 50%') >= 0)
+  assert.ok(wxml.indexOf('question-image') >= 0 && wxml.indexOf('current.imageUrl') >= 0)
+  assert.ok(wxss.indexOf('.question-image') >= 0)
+})
+
+test('答题反馈：展示你的答案/正确答案，听力题不展示转写原文', () => {
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxss'), 'utf8')
+  assert.ok(wxml.indexOf('answer-feedback') >= 0, '有答案对比卡片')
+  assert.ok(wxml.indexOf('你的答案') >= 0 && wxml.indexOf('正确答案') >= 0)
+  assert.ok(wxml.indexOf("current.kind !== 'listening'") >= 0, '听力解析（转写）不展示')
+  assert.ok(wxml.indexOf('confirmNext') >= 0 && wxml.indexOf('awaitingConfirm') >= 0, '需用户确认才跳下一题')
+  assert.ok(wxml.indexOf("class=\"q-title\" wx:if=\"{{levelState[challenge.id].current.kind !== 'listening'}}\"") >= 0, '不展示听力题占位标题')
+  assert.ok(wxss.indexOf('.answer-feedback') >= 0 && wxss.indexOf('.af-value.bad') >= 0)
 })
 
 test('结算数据 resultPanel：字段齐全、stars_added 可透传', () => {
@@ -316,6 +368,18 @@ test('日历 buildCells：周一开头、days 高亮、无成绩字段', () => {
   assert.strictEqual(byDate['2026-11-01'].score, undefined, '不含成绩字段')
   assert.strictEqual(byDate['2026-11-01'].title, undefined, '不含关卡标题')
   assert.strictEqual(def.shiftMonth('2026-11', -1), '2026-10')
+})
+
+test('打卡日历月份导航：灰色实心箭头 + 主题色月份，无上一月/下一月文字', () => {
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/calendar/calendar.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(__dirname, '../pages/calendar/calendar.wxss'), 'utf8')
+  assert.ok(wxml.indexOf('◀') >= 0 && wxml.indexOf('▶') >= 0, '实心三角箭头')
+  assert.ok(wxml.indexOf('nav-month') >= 0 && wxml.indexOf('{{monthLabel}}') >= 0)
+  assert.ok(wxml.indexOf('上一月') === -1 && wxml.indexOf('下一月') === -1, '不展示上一月/下一月文字')
+  assert.ok(wxml.indexOf('nav-arrow-disabled') >= 0)
+  assert.ok(wxss.indexOf('.nav-month') >= 0 && wxss.indexOf('color: var(--theme-color, #1677ff)') >= 0, '月份用主题色')
+  assert.ok(wxss.indexOf('.nav-arrow') >= 0 && wxss.indexOf('color: #8a919f') >= 0, '箭头灰色')
+  assert.ok(wxml.indexOf('bindtap="prevMonth"') >= 0 && wxml.indexOf('bindtap="nextMonth"') >= 0)
 })
 
 test('页面与样式不含日期语义/旧接口/成绩面板文案', () => {
@@ -500,6 +564,183 @@ atest('关卡页 load：首屏仅请求 /api/levels?lang=de，定位 progress.cu
   assert.strictEqual(capturedRequests[1].url, api.BASE_URL + '/api/levels/12')
 })
 
+atest('关卡页音频：canplay 显示总时长、timeupdate 更新当前位置与进度条', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_AUDIO')
+  const def = loadPage('../pages/levels/levels.js')
+  const page = pageMock(def)
+  const id = 12
+  const seq = 9
+  const item = {
+    seq: seq,
+    audioUrl: 'https://cdn.example/a.mp3',
+    audioDuration: 12.8
+  }
+  page.data.levelState[id] = {
+    items: [item],
+    current: item,
+    cursor: 0,
+    total: 1,
+    playingSeq: 0,
+    audioProgress: '0:00 / 0:00',
+    audioPercent: 0
+  }
+  def.toggleAudio.call(page, { currentTarget: { dataset: { id: id, seq: seq } } })
+  assert.strictEqual(page.data.levelState[id].playingSeq, seq)
+  assert.strictEqual(page.data.levelState[id].audioProgress, '0:00 / 0:12')
+  const ctx = audioContexts[0]
+  assert.ok(ctx)
+  assert.strictEqual(ctx.src, item.audioUrl)
+  assert.strictEqual(ctx.obeyMuteSwitch, false)
+  ctx.duration = 12.8
+  ctx.currentTime = 3.2
+  ctx.emit('timeupdate')
+  assert.strictEqual(page.data.levelState[id].audioProgress, '0:03 / 0:12')
+  assert.strictEqual(page.data.levelState[id].audioPercent, 25)
+  ctx.currentTime = 12.8
+  ctx.emit('ended')
+  assert.strictEqual(page.data.levelState[id].playingSeq, 0)
+  assert.strictEqual(page.data.levelState[id].audioProgress, '0:12 / 0:12')
+  assert.strictEqual(page.data.levelState[id].audioPercent, 100)
+})
+
+atest('关卡页音频：暂停保留位置，再次播放复用实例并从暂停位置续播', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_PAUSE')
+  const def = loadPage('../pages/levels/levels.js')
+  const page = pageMock(def)
+  const id = 12
+  const seq = 9
+  const item = { seq: seq, audioUrl: 'https://cdn.example/a.mp3', audioDuration: 12.8 }
+  page.data.levelState[id] = {
+    items: [item], current: item, cursor: 0, total: 1,
+    playingSeq: 0, pausedSeq: 0, audioProgress: '0:00 / 0:00', audioPercent: 0
+  }
+  const tap = () => def.toggleAudio.call(page, { currentTarget: { dataset: { id: id, seq: seq } } })
+  tap()
+  const ctx = audioContexts[0]
+  ctx.duration = 12.8
+  ctx.currentTime = 4.1
+  ctx.emit('timeupdate')
+  assert.strictEqual(page.data.levelState[id].audioProgress, '0:04 / 0:12')
+  // 暂停：只 pause，不 destroy，记录位置与 pausedSeq
+  tap()
+  assert.strictEqual(ctx.paused, true)
+  assert.strictEqual(page.data.levelState[id].playingSeq, 0)
+  assert.strictEqual(page.data.levelState[id].pausedSeq, seq)
+  assert.strictEqual(page.data.levelState[id].audioProgress, '0:04 / 0:12')
+  const playCountBefore = ctx.playCount
+  // 续播：复用同一实例，未新建 context
+  tap()
+  assert.strictEqual(audioContexts.length, 1, '续播不得新建 InnerAudioContext')
+  assert.strictEqual(ctx.playCount, playCountBefore + 1)
+  assert.strictEqual(ctx.seekedTo, 4.1, '从暂停位置 seek')
+  assert.strictEqual(page.data.levelState[id].playingSeq, seq)
+  assert.strictEqual(page.data.levelState[id].pausedSeq, 0)
+  assert.strictEqual(page.data.levelState[id].audioProgress, '0:04 / 0:12')
+  assert.strictEqual(page.data.levelState[id].audioPercent, 32)
+})
+
+atest('听力题答题后等待用户确认才跳题，跳题后音频与进度归零并绑定新题', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_CONFIRM')
+  const def = loadPage('../pages/levels/levels.js')
+  const pending = []
+  const page = pageMock(def, {
+    _timers: [],
+    later(fn) { pending.push(fn); return pending.length }
+  })
+  const id = 12
+  const q1 = { seq: 1, kind: 'listening', audioUrl: 'https://cdn.example/a.mp3', audioDuration: 12.8,
+    correctAnswer: 'mit dem Zug' }
+  const q2 = { seq: 2, kind: 'listening', audioUrl: 'https://cdn.example/b.mp3', audioDuration: 8.4,
+    correctAnswer: '1 Tag' }
+  page.data.challenges = [{ id: id, position: 1, unlocked: true }]
+  page.data.currentIndex = 0
+  page.data.levelState[id] = {
+    items: [q1, q2], current: q1, cursor: 0, total: 2, answeredCount: 0,
+    flying: false, feedback: null, awaitingConfirm: false, result: null,
+    playingSeq: 0, pausedSeq: 0, audioErrorSeq: 0, audioProgress: '0:00 / 0:12', audioPercent: 0
+  }
+  def.onPick.call(page, {
+    currentTarget: { dataset: { id: id, seq: 1, value: 'mit dem Zug' } }
+  })
+  assert.strictEqual(pending.length, 1, '答题后只有反馈定时器')
+  pending.shift()()
+  const afterPick = page.data.levelState[id]
+  assert.strictEqual(afterPick.awaitingConfirm, true)
+  assert.strictEqual(afterPick.cursor, 0, '未确认前不得跳题')
+  assert.strictEqual(afterPick.items[0].answered, true)
+  assert.strictEqual(pending.length, 0, '听力题不得自动排飞卡/推进定时器')
+  // 确认后进入飞卡，定时器到点才推进；此刻模拟上一题音频仍在播
+  def.confirmNext.call(page, { currentTarget: { dataset: { id: id } } })
+  assert.strictEqual(page.data.levelState[id].awaitingConfirm, false)
+  assert.strictEqual(pending.length, 1)
+  page.data.levelState[id].playingSeq = 1
+  page.data.levelState[id].audioProgress = '0:07 / 0:12'
+  page.data.levelState[id].audioPercent = 58
+  pending.shift()()
+  const afterAdvance = page.data.levelState[id]
+  assert.strictEqual(afterAdvance.cursor, 1, '确认后进入下一题')
+  assert.strictEqual(afterAdvance.current.seq, 2)
+  assert.strictEqual(afterAdvance.playingSeq, 0)
+  assert.strictEqual(afterAdvance.pausedSeq, 0)
+  assert.strictEqual(afterAdvance.audioErrorSeq, 0)
+  assert.strictEqual(afterAdvance.audioProgress, '0:00 / 0:08', '进度按新题时长归零')
+  assert.strictEqual(afterAdvance.audioPercent, 0)
+  assert.strictEqual(afterAdvance.feedback, null)
+  assert.strictEqual(afterAdvance.awaitingConfirm, false)
+})
+
+test('听力播放/暂停时展示停止与暂停按钮，停止后进度归零', () => {
+  const def = loadPage('../pages/levels/levels.js')
+  const page = pageMock(def)
+  const id = 7
+  page.data.currentIndex = 0
+  page.data.challenges = [{ id: id, position: 1, challenge_type: 'listening', unlocked: true }]
+  page.data.levelState[id] = {
+    playingSeq: 3, pausedSeq: 0, audioErrorSeq: 0, audioPercent: 42,
+    current: { seq: 3, audioDuration: 20 }, items: []
+  }
+
+  def.stopAudioTap.call(page, { currentTarget: { dataset: { id: id, seq: 3 } } })
+  const st = page.data.levelState[id]
+  assert.strictEqual(st.playingSeq, 0)
+  assert.strictEqual(st.pausedSeq, 0)
+  assert.strictEqual(st.audioPercent, 0)
+  assert.ok(st.audioProgress.indexOf('0:00') === 0, '进度文本归零')
+
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxml'), 'utf8')
+  assert.ok(wxml.indexOf('bindtap="stopAudioTap"') >= 0, '播放中展示停止按钮')
+  assert.ok(wxml.indexOf('audio-stop') >= 0, '停止按钮有独立样式')
+})
+
+test('已完成关卡只读回顾：openReview 汇总题目与作答，closeReview 关闭', () => {
+  const def = loadPage('../pages/levels/levels.js')
+  const page = pageMock(def)
+  const id = 12
+  const items = [
+    { seq: 1, kind: 'word', kindLabel: '单词', prompt: { question: 'Baum', options: ['树', '窗'] },
+      selected: '树', correct: true, correctAnswer: '树', explanation: 'Baum = 树' },
+    { seq: 2, kind: 'grammar', kindLabel: '语法', prompt: { question: '...', options: ['A', 'B'] },
+      selected: 'B', correct: false, correctAnswer: 'A' }
+  ]
+  page.data.challenges = [{ id: id, position: 3, challenge_type: 'grammar', unlocked: true }]
+  page.data.levelState[id] = { items, result: { score: 1, total: 2, stars: 2, bestStars: 2 } }
+
+  def.openReview.call(page, { currentTarget: { dataset: { id: id } } })
+  assert.strictEqual(page.data.reviewing.items.length, 2, '回顾包含全部题目')
+  assert.strictEqual(page.data.reviewing.title, '第 3 关 · 语法')
+  assert.strictEqual(page.data.reviewing.summary, '得分 1/2 · 最高 2 星')
+
+  def.closeReview.call(page)
+  assert.strictEqual(page.data.reviewing, null)
+
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxml'), 'utf8')
+  assert.ok(wxml.indexOf('bindtap="openReview"') >= 0, '结算面板提供查看题目入口')
+  assert.ok(wxml.indexOf('wx:if="{{reviewing}}"') >= 0, '回顾为只读浮层')
+})
+
 atest('关卡页详情懒加载：解锁关拉详情、缓存后不重复请求、attempt 恢复结算', async () => {
   reset()
   wx.setStorageSync('wx_token', 'TOKEN_DETAIL')
@@ -590,6 +831,31 @@ atest('我的页 refresh：累计星星/进度取 /api/levels，提供去闯关�
   } finally {
     delete global.wx.switchTab
   }
+})
+
+atest('我的页：等级提示不再常驻，仅修改等级成功后 toast 展示', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_LEVEL')
+  session.setUser({ level: 'A1', nickname: 'Anna' })
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/mine/mine.wxml'), 'utf8')
+  assert.ok(wxml.indexOf('修改等级会保存到服务器') === -1, '页面不得常驻该提示')
+  const def = loadPage('../pages/mine/mine.js')
+  const page = pageMock(def)
+  // 1) updateLevel → 2) refresh 的 getMe → 3) refresh 的 /api/levels
+  requestQueue.push({ statusCode: 200, data: { user: { level: 'A2', nickname: 'Anna' } } })
+  requestQueue.push({ statusCode: 200, data: { user: { level: 'A2', nickname: 'Anna' } } })
+  requestQueue.push({ statusCode: 200, data: { total_stars: 5, progress: { total: 2, passed: 1, current: 2 } } })
+  await def.onLevelChange.call(page, { detail: { value: 1 } })
+  assert.strictEqual(capturedRequests[0].url, api.BASE_URL + '/api/auth/wx-profile')
+  assert.deepStrictEqual(capturedRequests[0].data, { level: 'A2' })
+  assert.strictEqual(toasts.length, 1)
+  assert.strictEqual(toasts[0].title, '修改等级会保存到服务器，关卡与日历将按新等级刷新')
+  assert.strictEqual(toasts[0].icon, 'none')
+  assert.strictEqual(session.getState().level, 'A2')
+  // 选择相同等级时不发请求、不弹提示
+  await def.onLevelChange.call(page, { detail: { value: 1 } })
+  assert.strictEqual(capturedRequests.length, 3)
+  assert.strictEqual(toasts.length, 1)
 })
 
 atest('日历页读取 calendar.days + streak，不传 level、不展示成绩', async () => {

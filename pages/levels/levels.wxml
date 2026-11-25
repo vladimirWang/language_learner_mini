@@ -85,6 +85,7 @@
               <text class="link" data-id="{{challenge.id}}" bindtap="resubmit">重新提交</text>
             </view>
             <view class="result-actions">
+              <button class="btn-ghost" data-id="{{challenge.id}}" bindtap="openReview">查看题目</button>
               <button class="btn-ghost" data-id="{{challenge.id}}" bindtap="retryLevel">再答一次</button>
               <button
                 wx:if="{{challenges[index + 1] && challenges[index + 1].unlocked !== false}}"
@@ -115,16 +116,41 @@
 
               <view class="audio-bar" wx:if="{{levelState[challenge.id].current.audioUrl}}">
                 <view
-                  class="audio-btn"
+                  class="audio-btn {{levelState[challenge.id].playingSeq === levelState[challenge.id].current.seq ? 'is-playing' : ''}}"
                   data-id="{{challenge.id}}"
                   data-seq="{{levelState[challenge.id].current.seq}}"
                   bindtap="toggleAudio"
-                >{{levelState[challenge.id].playingSeq === levelState[challenge.id].current.seq ? '暂停' : '播放'}}</view>
+                >
+                  <text class="audio-icon">{{levelState[challenge.id].playingSeq === levelState[challenge.id].current.seq ? '⏸' : '▶'}}</text>
+                </view>
+                <view
+                  wx:if="{{levelState[challenge.id].playingSeq === levelState[challenge.id].current.seq || levelState[challenge.id].pausedSeq === levelState[challenge.id].current.seq}}"
+                  class="audio-btn audio-stop"
+                  data-id="{{challenge.id}}"
+                  data-seq="{{levelState[challenge.id].current.seq}}"
+                  bindtap="stopAudioTap"
+                >
+                  <text class="audio-icon">⏹</text>
+                </view>
+                <view class="audio-track">
+                  <view class="audio-fill" style="width: {{levelState[challenge.id].audioPercent || 0}}%"></view>
+                  <view class="audio-dot" style="left: {{levelState[challenge.id].audioPercent || 0}}%"></view>
+                </view>
                 <view class="audio-progress">{{levelState[challenge.id].audioProgress}}</view>
               </view>
               <view class="audio-error" wx:if="{{levelState[challenge.id].audioErrorSeq === levelState[challenge.id].current.seq}}">音频加载失败，请重试</view>
 
-              <view class="q-title">{{levelState[challenge.id].current.prompt.question}}</view>
+              <image
+                wx:if="{{levelState[challenge.id].current.imageUrl}}"
+                class="question-image"
+                src="{{levelState[challenge.id].current.imageUrl}}"
+                mode="widthFix"
+                data-url="{{levelState[challenge.id].current.imageUrl}}"
+                bindtap="previewImage"
+              />
+
+              <!-- 听力题的 question 是「听力第 N 题」占位文案，真正题干在图片里，不展示 -->
+              <view class="q-title" wx:if="{{levelState[challenge.id].current.kind !== 'listening'}}">{{levelState[challenge.id].current.prompt.question}}</view>
 
               <view
                 wx:for="{{levelState[challenge.id].current.prompt.options}}"
@@ -138,8 +164,35 @@
                 bindtap="onPick"
               >{{option}}</view>
 
-              <view class="explain" wx:if="{{levelState[challenge.id].feedback && levelState[challenge.id].feedback.seq === levelState[challenge.id].current.seq && levelState[challenge.id].feedback.explanation}}">
+              <!-- 答题反馈：明确对比「你的答案 / 正确答案」 -->
+              <view
+                class="answer-feedback {{levelState[challenge.id].feedback && levelState[challenge.id].feedback.correct ? 'is-correct' : 'is-wrong'}}"
+                wx:if="{{levelState[challenge.id].feedback && levelState[challenge.id].feedback.seq === levelState[challenge.id].current.seq}}"
+              >
+                <view class="af-head">
+                  <text class="af-icon">{{levelState[challenge.id].feedback.correct ? '✓' : '✗'}}</text>
+                  <text class="af-title">{{levelState[challenge.id].feedback.correct ? '回答正确' : '回答错误'}}</text>
+                </view>
+                <view class="af-row">
+                  <text class="af-label">你的答案</text>
+                  <text class="af-value {{levelState[challenge.id].feedback.correct ? 'good' : 'bad'}}">{{levelState[challenge.id].feedback.selected || '未作答'}}</text>
+                </view>
+                <view class="af-row" wx:if="{{!levelState[challenge.id].feedback.correct}}">
+                  <text class="af-label">正确答案</text>
+                  <text class="af-value good">{{levelState[challenge.id].feedback.correctAnswer}}</text>
+                </view>
+              </view>
+
+              <!-- 解析：听力题的 explanation 就是转写原文，答题后不展示；其他题型保留考点解析 -->
+              <view class="explain" wx:if="{{levelState[challenge.id].feedback && levelState[challenge.id].feedback.seq === levelState[challenge.id].current.seq && levelState[challenge.id].feedback.explanation && levelState[challenge.id].current.kind !== 'listening'}}">
                 {{levelState[challenge.id].feedback.explanation}}
+              </view>
+
+              <!-- 听力题：展示完答案后必须用户点确认才进入下一题（最后一题为提交） -->
+              <view class="confirm-bar" wx:if="{{levelState[challenge.id].awaitingConfirm && levelState[challenge.id].feedback && levelState[challenge.id].feedback.seq === levelState[challenge.id].current.seq}}">
+                <button class="btn-primary confirm-btn" data-id="{{challenge.id}}" bindtap="confirmNext">
+                  {{levelState[challenge.id].cursor + 1 >= levelState[challenge.id].total ? '确认，提交' : '确认，下一题'}}
+                </button>
               </view>
             </block>
             <!-- 后排仅景深骨架，不渲染真实题目 -->
@@ -157,4 +210,51 @@
       </view>
     </swiper-item>
   </swiper>
+
+  <!-- 已完成关卡回顾：只读展示全部题目、你的答案与正确答案 -->
+  <view class="review-mask" wx:if="{{reviewing}}">
+    <view class="review-panel">
+      <view class="review-head">
+        <text class="review-title">{{reviewing.title}}</text>
+        <text class="review-close" bindtap="closeReview">关闭</text>
+      </view>
+      <view class="review-sub">{{reviewing.summary}}</view>
+      <scroll-view scroll-y class="review-body">
+        <view class="review-item" wx:for="{{reviewing.items}}" wx:for-item="item" wx:key="seq">
+          <view class="ri-head">
+            <text class="ri-no">第 {{item.seq}} 题</text>
+            <text class="ri-kind">{{item.kindLabel}}</text>
+            <text class="ri-status {{item.reviewStatusClass}}">{{item.reviewStatus}}</text>
+          </view>
+
+          <image
+            wx:if="{{item.imageUrl}}"
+            class="question-image"
+            src="{{item.imageUrl}}"
+            mode="widthFix"
+            data-url="{{item.imageUrl}}"
+            bindtap="previewImage"
+          />
+
+          <view class="q-title" wx:if="{{item.kind !== 'listening'}}">{{item.prompt.question}}</view>
+
+          <view
+            class="review-option {{item.correctAnswer === option ? 'is-correct' : ''}} {{item.selected === option && item.correctAnswer !== option ? 'is-wrong' : ''}}"
+            wx:for="{{item.prompt.options}}"
+            wx:for-item="option"
+            wx:key="*this"
+          >
+            {{option}}
+            <text class="review-tag" wx:if="{{item.selected === option}}">你的选择</text>
+          </view>
+
+          <view class="review-answer" wx:if="{{!item.correct}}">
+            正确答案：<text class="is-good">{{item.correctAnswer}}</text>
+          </view>
+          <view class="review-explain" wx:if="{{item.explanation && item.kind !== 'listening'}}">{{item.explanation}}</view>
+        </view>
+      </scroll-view>
+      <button class="btn-ghost review-back" bindtap="closeReview">返回结算</button>
+    </view>
+  </view>
 </view>

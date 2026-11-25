@@ -156,7 +156,11 @@ Page({
       const data = await api.updateLevel(level)
       // 成功后才更新本地；返回值带 user 时由 api.updateLevel 注入 store。
       if (!data || !data.user) session.setLevel(level)
-      wx.showToast({ title: '等级已更新', icon: 'success' })
+      wx.showToast({
+        title: '修改等级会保存到服务器，关卡与日历将按新等级刷新',
+        icon: 'none',
+        duration: 2500
+      })
       await this.refresh()
     } catch (err) {
       wx.showModal({ title: '等级更新失败', content: err.message || '请稍后重试', showCancel: false })
