@@ -225,6 +225,38 @@ function uploadAvatar(filePath, _retried) {
   })
 }
 
+/**
+ * 口语录音转写：录音先读成 base64，走普通 JSON 请求。
+ * 真机上 wx.uploadFile 经调试代理容易超时，后端因此提供了 base64 入口。
+ * @param {string} filePath 本地录音文件
+ * @param {string} lang 题目语种（de/en/...）
+ * @param {string} mime audio/wav 或 audio/mpeg
+ */
+function transcribeSpeaking(filePath, lang, mime) {
+  return new Promise((resolve, reject) => {
+    wx.getFileSystemManager().readFile({
+      filePath: filePath,
+      encoding: 'base64',
+      success(res) {
+        request('/api/speaking/transcribe-base64', {
+          method: 'POST',
+          data: {
+            audio: res.data,
+            mime: mime || 'audio/wav',
+            lang: lang || 'de'
+          }
+        }).then((data) => {
+          if (data && typeof data.text === 'string' && data.text.trim()) resolve(data.text.trim())
+          else reject(new Error('没有识别到语音'))
+        }).catch(reject)
+      },
+      fail() {
+        reject(new Error('读取录音失败'))
+      }
+    })
+  })
+}
+
 module.exports = {
   BASE_URL: BASE_URL,
   DEV_BASE_URL: DEV_BASE_URL,
@@ -245,5 +277,6 @@ module.exports = {
   updateProfile: updateProfile,
   updateNickname: updateNickname,
   updateLevel: updateLevel,
-  uploadAvatar: uploadAvatar
+  uploadAvatar: uploadAvatar,
+  transcribeSpeaking: transcribeSpeaking
 }

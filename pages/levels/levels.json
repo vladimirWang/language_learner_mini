@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "关卡",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "listening-audio": "/components/listening-audio/listening-audio"
+  }
 }

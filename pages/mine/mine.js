@@ -3,6 +3,7 @@
 // 累计星星与连续天数以 GET /api/levels 为准（§7.4），与关卡页保持一致。
 const api = require('../../utils/api.js')
 const session = require('../../utils/store/session.js')
+const permissions = require('../../utils/permissions.js')
 
 const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 const AVATAR_EXT = /\.(jpe?g|png|webp)$/i
@@ -22,6 +23,9 @@ Page({
     totalStars: 0,
     streak: { current: 0, longest: 0, last_day: '' },
     progress: { total: 0, passed: 0, current: 1 },
+    micStatus: 'unset',
+    micText: '未授权',
+    micActionText: '去授权',
     loading: true,
     saving: false,
     loadError: ''
@@ -38,6 +42,28 @@ Page({
 
   onShow() {
     this.refresh()
+    this.refreshMicPermission()
+  },
+
+  // ---- 权限管理：麦克风（scope.record）状态 ----
+  refreshMicPermission() {
+    permissions.getMicPermission().then((status) => this.applyMicStatus(status))
+  },
+
+  applyMicStatus(status) {
+    const text = status === 'granted' ? '已开启' : (status === 'denied' ? '已关闭' : '未授权')
+    const action = status === 'granted' || status === 'denied' ? '去设置' : '去授权'
+    this.setData({ micStatus: status, micText: text, micActionText: action })
+  },
+
+  async onMicPermissionTap() {
+    if (this.data.micStatus === 'unset' || this.data.micStatus === 'unknown') {
+      await permissions.requestMicPermission()
+    } else {
+      // 已授权/已拒绝都只能通过微信设置页调整。
+      await permissions.openMicSetting()
+    }
+    this.refreshMicPermission()
   },
 
   applyState(state) {

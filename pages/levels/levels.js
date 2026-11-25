@@ -641,6 +641,17 @@ Page({
   },
 
   /** 停止播放并回到开头：播放中与暂停中都展示停止按钮。 */
+  // listening-audio 组件事件 → 复用原有 dataset 处理逻辑。
+  onAudioToggle(e) {
+    const detail = e.detail || {}
+    this.toggleAudio({ currentTarget: { dataset: { id: detail.uid, seq: detail.seq } } })
+  },
+
+  onAudioStop(e) {
+    const detail = e.detail || {}
+    this.stopAudioTap({ currentTarget: { dataset: { id: detail.uid, seq: detail.seq } } })
+  },
+
   stopAudioTap(e) {
     const id = Number(e.currentTarget.dataset.id)
     if (!this.state(id)) return

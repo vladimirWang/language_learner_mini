@@ -45,6 +45,12 @@ Page({
     audioErrorIndex: -1,
     audioProgress: '',
     audioPercent: 0,
+    // 听力做题：一次只展示一题，选择即判分，确认后进入下一题。
+    cursor: 0,
+    answers: {},
+    revealed: {},
+    score: 0,
+    finished: false,
     showTranscript: {},
     showAnswer: {}
   },
@@ -93,7 +99,15 @@ Page({
         title: title,
         typeLabel: TYPE_LABELS[itemType] || this.data.typeLabel,
         listening: data && data.listening ? this.mapListening(data.listening) : null,
-        speaking: data && data.speaking ? this.mapSpeaking(data.speaking) : null
+        speaking: data && data.speaking ? this.mapSpeaking(data.speaking) : null,
+        // 刷新/重进时回到第一题，清掉上一轮作答。
+        cursor: 0,
+        answers: {},
+        revealed: {},
+        score: 0,
+        finished: false,
+        showTranscript: {},
+        showAnswer: {}
       })
       if (title) wx.setNavigationBarTitle({ title: title })
     } catch (error) {
@@ -147,6 +161,62 @@ Page({
     this.load()
   },
 
+  /** 选择选项即判分，与关卡页听力一致。 */
+  selectOption(e) {
+    const cursor = this.data.cursor
+    if (this.data.finished || this.data.revealed[cursor]) return
+    const value = e.currentTarget.dataset.value
+    const question = this.data.listening && this.data.listening.questions[cursor]
+    if (!question || value === undefined) return
+    const answers = Object.assign({}, this.data.answers)
+    answers[cursor] = value
+    const revealed = Object.assign({}, this.data.revealed)
+    revealed[cursor] = true
+    const correct = this.isAnswerCorrect(value, question.answer)
+    this.setData({
+      answers: answers,
+      revealed: revealed,
+      score: this.data.score + (correct ? 1 : 0)
+    })
+  },
+
+  isAnswerCorrect(value, answer) {
+    return String(value == null ? '' : value).trim().toLowerCase() ===
+      String(answer == null ? '' : answer).trim().toLowerCase()
+  },
+
+  /** 未作答时直接看答案，不计分。 */
+  revealAnswer() {
+    const cursor = this.data.cursor
+    const revealed = Object.assign({}, this.data.revealed)
+    revealed[cursor] = true
+    this.setData({ revealed: revealed })
+  },
+
+  confirmNext() {
+    const cursor = this.data.cursor
+    const questions = (this.data.listening && this.data.listening.questions) || []
+    this.stopAudioTap()
+    if (cursor + 1 >= questions.length) {
+      this.setData({ finished: true, cursor: cursor })
+      return
+    }
+    this.setData({ cursor: cursor + 1, audioProgress: '', audioPercent: 0 })
+  },
+
+  restartListening() {
+    this.stopAudioTap()
+    this.setData({
+      cursor: 0,
+      answers: {},
+      revealed: {},
+      score: 0,
+      finished: false,
+      audioProgress: '',
+      audioPercent: 0
+    })
+  },
+
   /** 展开/收起听力原文。 */
   toggleTranscript(e) {
     this.toggleMap('showTranscript', e.currentTarget.dataset.index)
@@ -171,6 +241,16 @@ Page({
   },
 
   // ---- 音频：同一时刻只播一题；暂停保留实例与位置，停止/切题/离开才销毁 ----
+  // listening-audio 组件事件：组件只负责展示，播放状态仍由页面持有。
+  onAudioToggle(e) {
+    const seq = e.detail && e.detail.seq
+    this.toggleAudio({ currentTarget: { dataset: { index: seq } } })
+  },
+
+  onAudioStop() {
+    this.stopAudioTap()
+  },
+
   toggleAudio(e) {
     if (!this.data.listening) return
     const index = Number(e.currentTarget.dataset.index)

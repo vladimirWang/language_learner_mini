@@ -1,0 +1,14 @@
+<view class="audio-bar">
+  <view class="audio-btn {{playing ? 'is-playing' : ''}}" bindtap="onToggle">
+    <text class="audio-icon">{{playing ? '⏸' : '▶'}}</text>
+  </view>
+  <view class="audio-btn audio-stop" wx:if="{{playing || paused}}" bindtap="onStop">
+    <text class="audio-icon">⏹</text>
+  </view>
+  <view class="audio-track">
+    <view class="audio-fill" style="width: {{percent || 0}}%"></view>
+    <view class="audio-dot" style="left: {{percent || 0}}%"></view>
+  </view>
+  <view class="audio-progress">{{progress}}</view>
+</view>
+<view class="audio-error" wx:if="{{error}}">音频加载失败，请重试</view>

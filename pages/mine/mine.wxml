@@ -35,6 +35,18 @@
     </view>
   </view>
 
+  <view class="card">
+    <view class="section-title">权限管理</view>
+    <view class="info-row">
+      <text class="muted">麦克风</text>
+      <view class="perm-right">
+        <text class="perm-status {{micStatus === 'granted' ? 'ok' : ''}}">{{micText}}</text>
+        <view class="perm-action" bindtap="onMicPermissionTap">{{micActionText}}</view>
+      </view>
+    </view>
+    <view class="muted perm-tip">口语测试需要麦克风权限，授权后可在微信设置中随时调整。</view>
+  </view>
+
   <view class="card calendar-entry" bindtap="goCalendar">
     <view class="row">
       <view>

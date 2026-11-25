@@ -37,12 +37,12 @@
             <text class="lh-type">{{challenge.challenge_type === 'grammar' ? '语法' : (challenge.challenge_type === 'listening' ? '听力' : '单词与搭配')}}</text>
             <text wx:if="{{challenge.passed}}" class="lh-passed">已通关</text>
           </view>
-          <view class="lh-sub">
+          <!-- <view class="lh-sub">
             最高 {{challenge.best_stars}} 星
             <block wx:if="{{levelState[challenge.id] && levelState[challenge.id].total}}">
               · 已答 {{levelState[challenge.id].answeredCount}}/{{levelState[challenge.id].total}}
             </block>
-          </view>
+          </view> -->
         </view>
 
         <!-- 加载中 -->
@@ -108,31 +108,18 @@
                 <text class="q-count">{{levelState[challenge.id].cursor + 1}}/{{levelState[challenge.id].total}}</text>
               </view>
 
-              <view class="audio-bar" wx:if="{{levelState[challenge.id].current.audioUrl}}">
-                <view
-                  class="audio-btn {{levelState[challenge.id].playingSeq === levelState[challenge.id].current.seq ? 'is-playing' : ''}}"
-                  data-id="{{challenge.id}}"
-                  data-seq="{{levelState[challenge.id].current.seq}}"
-                  bindtap="toggleAudio"
-                >
-                  <text class="audio-icon">{{levelState[challenge.id].playingSeq === levelState[challenge.id].current.seq ? '⏸' : '▶'}}</text>
-                </view>
-                <view
-                  wx:if="{{levelState[challenge.id].playingSeq === levelState[challenge.id].current.seq || levelState[challenge.id].pausedSeq === levelState[challenge.id].current.seq}}"
-                  class="audio-btn audio-stop"
-                  data-id="{{challenge.id}}"
-                  data-seq="{{levelState[challenge.id].current.seq}}"
-                  bindtap="stopAudioTap"
-                >
-                  <text class="audio-icon">⏹</text>
-                </view>
-                <view class="audio-track">
-                  <view class="audio-fill" style="width: {{levelState[challenge.id].audioPercent || 0}}%"></view>
-                  <view class="audio-dot" style="left: {{levelState[challenge.id].audioPercent || 0}}%"></view>
-                </view>
-                <view class="audio-progress">{{levelState[challenge.id].audioProgress}}</view>
-              </view>
-              <view class="audio-error" wx:if="{{levelState[challenge.id].audioErrorSeq === levelState[challenge.id].current.seq}}">音频加载失败，请重试</view>
+              <listening-audio
+                wx:if="{{levelState[challenge.id].current.audioUrl}}"
+                playing="{{levelState[challenge.id].playingSeq === levelState[challenge.id].current.seq}}"
+                paused="{{levelState[challenge.id].pausedSeq === levelState[challenge.id].current.seq}}"
+                percent="{{levelState[challenge.id].audioPercent || 0}}"
+                progress="{{levelState[challenge.id].audioProgress}}"
+                error="{{levelState[challenge.id].audioErrorSeq === levelState[challenge.id].current.seq}}"
+                uid="{{challenge.id}}"
+                seq="{{levelState[challenge.id].current.seq}}"
+                bind:toggle="onAudioToggle"
+                bind:stop="onAudioStop"
+              />
 
               <image
                 wx:if="{{levelState[challenge.id].current.imageUrl}}"

@@ -158,3 +158,32 @@
   border-radius: 16rpx;
   font-size: 30rpx;
 }
+
+.perm-right {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.perm-status {
+  font-size: 26rpx;
+  color: #8a8f99;
+}
+
+.perm-status.ok {
+  color: #1f9d55;
+}
+
+.perm-action {
+  font-size: 24rpx;
+  color: #2f6bff;
+  padding: 6rpx 18rpx;
+  border: 1rpx solid #2f6bff;
+  border-radius: 999rpx;
+  line-height: 1.4;
+}
+
+.perm-tip {
+  margin-top: 14rpx;
+  font-size: 24rpx;
+}

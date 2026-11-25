@@ -1,0 +1,78 @@
+<view class="page">
+  <view class="loading" wx:if="{{loading}}">正在加载口语任务…</view>
+
+  <view class="card error-card" wx:elif="{{error}}">
+    <view class="error">{{error}}</view>
+    <button class="btn-primary" bindtap="load">重试</button>
+  </view>
+
+  <block wx:else>
+    <view class="card head">
+      <view class="head-title">{{title}}</view>
+      <view class="head-meta">
+        <text class="tag">{{typeLabel}}</text>
+        <text class="muted">第 {{currentIndex + 1}} / {{items.length}} 题</text>
+      </view>
+      <view class="muted head-tip" wx:if="{{!summary}}">考官说完后会自动开启麦克风；说完停顿约 1 秒即自动提交。</view>
+    </view>
+
+    <scroll-view class="chat" scroll-y scroll-into-view="{{scrollInto}}" scroll-with-animation>
+      <view
+        wx:for="{{messages}}"
+        wx:key="id"
+        id="{{item.id}}"
+        class="msg-row {{item.role === 'user' ? 'msg-right' : 'msg-left'}}"
+      >
+        <view class="avatar {{item.role}}">{{item.role === 'user' ? '我' : 'AI'}}</view>
+        <view class="bubble-wrap">
+          <view class="bubble {{item.role}}">{{item.text}}</view>
+
+          <view class="grammar" wx:if="{{item.role === 'user' && item.grammar}}" data-id="{{item.id}}" bindtap="toggleGrammar">
+            <view class="grammar-head">
+              <text class="grammar-title">语法反馈</text>
+              <text class="muted">{{showGrammar[item.id] ? '收起' : '展开'}}</text>
+            </view>
+            <view class="grammar-body" wx:if="{{showGrammar[item.id]}}">
+              <view class="grammar-line" wx:if="{{item.grammar.corrected}}">更自然：{{item.grammar.corrected}}</view>
+              <view class="grammar-line" wx:for="{{item.grammar.errors}}" wx:for-item="err" wx:key="index">
+                <text class="grammar-type" wx:if="{{err.type}}">［{{err.type}}］</text>
+                <text class="grammar-wrong">{{err.snippet}}</text>
+                <text wx:if="{{err.fix}}"> → {{err.fix}}</text>
+                <view class="muted" wx:if="{{err.explanation}}">{{err.explanation}}</view>
+              </view>
+              <view class="grammar-line" wx:if="{{item.grammar.comment}}">{{item.grammar.comment}}</view>
+            </view>
+          </view>
+          <view class="muted checking" wx:if="{{item.checking}}">语法分析中…</view>
+        </view>
+      </view>
+
+      <view class="card summary" wx:if="{{summary}}">
+        <view class="summary-title">本次口语小结</view>
+        <view class="summary-row"><text class="muted">完成题目</text><text>{{summary.items}} / {{items.length}}</text></view>
+        <view class="summary-row"><text class="muted">回答次数</text><text>{{summary.exchanges}}</text></view>
+        <view class="summary-row"><text class="muted">语法问题</text><text>{{summary.grammarErrors}} 处</text></view>
+        <view class="summary-actions">
+          <button class="btn-ghost" bindtap="goBack">返回测试</button>
+          <button class="btn-primary" bindtap="restart">再练一次</button>
+        </view>
+      </view>
+
+      <view class="chat-bottom"></view>
+    </scroll-view>
+
+    <view class="panel" wx:if="{{!summary}}">
+      <view class="panel-status">
+        <view class="pulse" wx:if="{{recording}}"></view>
+        <text>{{statusText || '准备中…'}}</text>
+        <text class="muted" wx:if="{{recording}}">{{recordingSeconds}}s</text>
+      </view>
+      <view class="panel-actions">
+        <button class="btn-primary round" wx:if="{{recording}}" bindtap="stopRecording">说完了</button>
+        <button class="btn-primary round" wx:elif="{{micDenied}}" bindtap="onOpenSetting">去开启麦克风</button>
+        <button class="btn-ghost round" wx:elif="{{phase === 'idle'}}" bindtap="onTapContinue">继续</button>
+        <text class="muted panel-hint" wx:else>请稍候…</text>
+      </view>
+    </view>
+  </block>
+</view>

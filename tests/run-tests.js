@@ -31,6 +31,20 @@ let toasts = []
 let navigateCalls = []
 let navTitles = []
 let envVersion = 'release'
+let authSetting = {}
+let modals = []
+let modalConfirm = true
+let recorderStarts = []
+let fileWrites = []
+let navigatedBack = 0
+const recorderHandlers = {}
+const recorderMock = {
+  onFrameRecorded(fn) { recorderHandlers.frame = fn },
+  onStop(fn) { recorderHandlers.stop = fn },
+  onError(fn) { recorderHandlers.error = fn },
+  start(opts) { recorderStarts.push(opts || {}) },
+  stop() { recorderHandlers.stop && recorderHandlers.stop({ tempFilePath: '/tmp/answer.mp3' }) }
+}
 
 global.wx = {
   getAccountInfoSync() { return { miniProgram: { envVersion: envVersion } } },
@@ -64,7 +78,33 @@ global.wx = {
     }, 0)
   },
   showToast(o) { toasts.push(o) },
-  showModal() {},
+  showModal(o) {
+    modals.push(o)
+    if (o && o.success) o.success({ confirm: modalConfirm, cancel: !modalConfirm })
+  },
+  getSetting(o) { o && o.success && o.success({ authSetting: Object.assign({}, authSetting) }) },
+  authorize(o) {
+    if (authSetting['scope.record'] === false) {
+      o && o.fail && o.fail({ errMsg: 'authorize:fail auth deny' })
+      return
+    }
+    authSetting['scope.record'] = true
+    o && o.success && o.success({})
+  },
+  openSetting(o) { o && o.success && o.success({ authSetting: Object.assign({}, authSetting) }) },
+  getRecorderManager() { return recorderMock },
+  getFileSystemManager() {
+    return {
+      writeFile(o) { fileWrites.push(o); o && o.success && o.success({}) },
+      readFile(o) {
+        fileWrites.push(o)
+        o && o.success && o.success({ data: 'bW9jaw==' })
+      },
+      unlink(o) { o && o.success && o.success({}) }
+    }
+  },
+  env: { USER_DATA_PATH: '/tmp' },
+  navigateBack() { navigatedBack += 1 },
   stopPullDownRefresh() {},
   navigateTo(o) { navigateCalls.push(o) },
   switchTab() {},
@@ -109,6 +149,12 @@ function reset() {
   navigateCalls = []
   navTitles = []
   envVersion = 'release'
+  authSetting = {}
+  modals = []
+  modalConfirm = true
+  recorderStarts = []
+  fileWrites = []
+  navigatedBack = 0
   session.clear()
 }
 
@@ -229,7 +275,7 @@ test('全局 store：初始状态、setUser/setLevel 不保存隐私字段、订
   assert.strictEqual(session.getState().level, 'A1')
 })
 
-test('app.json 注册六页、三 Tab，calendar/testDetail/taskDetail 为二级页，tests 目录不进包', () => {
+test('app.json 注册七页、三 Tab，calendar/testDetail/taskDetail/speakingTask 为二级页，tests 目录不进包', () => {
   const app = JSON.parse(fs.readFileSync(path.join(__dirname, '../app.json'), 'utf8'))
   assert.deepStrictEqual(app.pages, [
     'pages/levels/levels',
@@ -237,6 +283,7 @@ test('app.json 注册六页、三 Tab，calendar/testDetail/taskDetail 为二级
     'pages/tests/tests',
     'pages/testDetail/testDetail',
     'pages/taskDetail/taskDetail',
+    'pages/speakingTask/speakingTask',
     'pages/mine/mine'
   ])
   assert.deepStrictEqual(app.tabBar.list.map((item) => item.pagePath), [
@@ -245,7 +292,7 @@ test('app.json 注册六页、三 Tab，calendar/testDetail/taskDetail 为二级
   const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../project.config.json'), 'utf8'))
   assert.ok(config.packOptions.ignore.some((item) => item.type === 'folder' && item.value === 'tests'))
   const pagesDir = fs.readdirSync(path.join(__dirname, '../pages'))
-  assert.deepStrictEqual(pagesDir.sort(), ['calendar', 'levels', 'mine', 'taskDetail', 'testDetail', 'tests'])
+  assert.deepStrictEqual(pagesDir.sort(), ['calendar', 'levels', 'mine', 'speakingTask', 'taskDetail', 'testDetail', 'tests'])
 })
 
 // ---- 同步用例：关卡纯逻辑（新契约）----
@@ -331,11 +378,15 @@ test('音频进度 formatDuration/audioTimeText：秒转 m:ss 并拼接当前/�
 test('音频播放器：播放/暂停图标、进度文本与进度条由 InnerAudioContext 事件驱动', () => {
   const wxml = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxml'), 'utf8')
   const wxss = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxss'), 'utf8')
-  assert.ok(wxml.indexOf("'⏸' : '▶'") >= 0 || wxml.indexOf('⏸') >= 0)
-  assert.ok(wxml.indexOf('audio-fill') >= 0)
-  assert.ok(wxml.indexOf('audio-dot') >= 0)
-  assert.ok(wxml.indexOf('audioPercent') >= 0)
-  assert.ok(wxss.indexOf('.audio-dot') >= 0 && wxss.indexOf('border-radius: 50%') >= 0)
+  const compWxml = fs.readFileSync(path.join(__dirname, '../components/listening-audio/listening-audio.wxml'), 'utf8')
+  const compWxss = fs.readFileSync(path.join(__dirname, '../components/listening-audio/listening-audio.wxss'), 'utf8')
+  // 音频条抽成公共组件，关卡页与任务页复用。
+  assert.ok(wxml.indexOf('<listening-audio') >= 0, '关卡页应使用公共音频组件')
+  assert.ok(compWxml.indexOf("'⏸' : '▶'") >= 0 || compWxml.indexOf('⏸') >= 0)
+  assert.ok(compWxml.indexOf('audio-fill') >= 0)
+  assert.ok(compWxml.indexOf('audio-dot') >= 0)
+  assert.ok(compWxml.indexOf('percent') >= 0)
+  assert.ok(compWxss.indexOf('.audio-dot') >= 0 && compWxss.indexOf('border-radius: 50%') >= 0)
   assert.ok(wxml.indexOf('question-image') >= 0 && wxml.indexOf('current.imageUrl') >= 0)
   assert.ok(wxss.indexOf('.question-image') >= 0)
 })
@@ -769,8 +820,9 @@ test('听力播放/暂停时展示停止与暂停按钮，停止后进度归零'
   assert.ok(st.audioProgress.indexOf('0:00') === 0, '进度文本归零')
 
   const wxml = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxml'), 'utf8')
-  assert.ok(wxml.indexOf('bindtap="stopAudioTap"') >= 0, '播放中展示停止按钮')
-  assert.ok(wxml.indexOf('audio-stop') >= 0, '停止按钮有独立样式')
+  const compWxml = fs.readFileSync(path.join(__dirname, '../components/listening-audio/listening-audio.wxml'), 'utf8')
+  assert.ok(wxml.indexOf('bind:stop="onAudioStop"') >= 0, '播放中由组件派发停止事件')
+  assert.ok(compWxml.indexOf('audio-stop') >= 0, '停止按钮有独立样式')
 })
 
 test('已完成关卡只读回顾：openReview 汇总题目与作答，closeReview 关闭', () => {
@@ -1129,6 +1181,132 @@ atest('任务详情页缺少参数时提示且不发起请求', async () => {
   assert.strictEqual(page.data.loading, false)
   assert.strictEqual(page.data.error, '任务参数缺失')
   assert.strictEqual(capturedRequests.length, 0)
+})
+
+atest('权限工具：未授权时主动授权，已拒绝返回 denied', async () => {
+  reset()
+  const permissions = require('../utils/permissions.js')
+  assert.strictEqual(await permissions.getMicPermission(), 'unset')
+  assert.strictEqual(await permissions.ensureMicPermission(), 'granted')
+  assert.strictEqual(authSetting['scope.record'], true)
+  authSetting['scope.record'] = false
+  assert.strictEqual(await permissions.getMicPermission(), 'denied')
+  assert.strictEqual(await permissions.ensureMicPermission(), 'denied')
+})
+
+atest('测试详情页：有口语任务时展示权限提示，开启后进入对话页', async () => {
+  reset()
+  authSetting['scope.record'] = true
+  const def = loadPage('../pages/testDetail/testDetail.js')
+  const page = pageMock(def)
+  page.data.id = '7'
+  page.data.level = { difficulty: 'A1' }
+  page.data.hasSpeaking = true
+  page.data.micGranted = false
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/testDetail/testDetail.wxml'), 'utf8')
+  assert.ok(wxml.indexOf('hasSpeaking') >= 0, '应展示口语权限提示')
+  assert.ok(wxml.indexOf('bindtap="onEnableMic"') >= 0, '应提供去开启入口')
+
+  await def.openTask.call(page, {
+    currentTarget: { dataset: { examId: 'e2', itemType: 'speaking', name: '口语二' } }
+  })
+  assert.strictEqual(page.data.micGranted, true)
+  assert.strictEqual(navigateCalls.length, 1)
+  assert.strictEqual(navigateCalls[0].url,
+    '/pages/speakingTask/speakingTask?levelId=7&itemType=speaking&examId=e2&name=' +
+    encodeURIComponent('口语二') + '&level=A1')
+})
+
+atest('测试详情页：麦克风被拒绝时不进入口语任务，提示去设置', async () => {
+  reset()
+  authSetting['scope.record'] = false
+  const def = loadPage('../pages/testDetail/testDetail.js')
+  const page = pageMock(def)
+  page.data.id = '7'
+  await def.openTask.call(page, {
+    currentTarget: { dataset: { examId: 'e2', itemType: 'speaking', name: '口语二' } }
+  })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.strictEqual(navigateCalls.length, 0, '未授权时不应进入对话页')
+  assert.strictEqual(page.data.micGranted, false)
+  assert.strictEqual(modals.length, 1)
+  assert.strictEqual(modals[0].title, '需要麦克风权限')
+})
+
+test('口语任务纯函数：要点解析/覆盖、PCM 音量、WAV 头', () => {
+  const def = loadPage('../pages/speakingTask/speakingTask.js')
+  assert.deepStrictEqual(def.parsePoints('姓名|名字; 职业\n爱好'), ['姓名|名字', '职业', '爱好'])
+  assert.deepStrictEqual(def.coveredPoints('Ich heiße Anna', ['姓名|heiße', '职业']), ['姓名|heiße'])
+
+  const pcm = new Int16Array(320)
+  pcm.fill(16384) // 0.5 幅度
+  assert.ok(Math.abs(def.frameRms(pcm.buffer) - 0.5) < 0.01)
+
+  const wav = def.wavFromChunks([new ArrayBuffer(320)], 16000)
+  assert.strictEqual(wav.byteLength, 44 + 320)
+  const view = new DataView(wav)
+  const tag = (offset, len) => {
+    let text = ''
+    for (let i = 0; i < len; i += 1) text += String.fromCharCode(view.getUint8(offset + i))
+    return text
+  }
+  assert.strictEqual(tag(0, 4), 'RIFF')
+  assert.strictEqual(tag(8, 4), 'WAVE')
+  assert.strictEqual(view.getUint32(24, true), 16000, '采样率写入 WAV 头')
+  assert.strictEqual(view.getUint32(40, true), 320, '数据长度写入 WAV 头')
+
+  const mapped = def.mapSpeakingItems([
+    { item_key: 'k1', prompt_de: 'Hallo', exam_part: 'part1_intro', expected_points: 'a' },
+    { item_key: 'k2', prompt_de: '' }
+  ])
+  assert.strictEqual(mapped.length, 1)
+  assert.strictEqual(mapped[0].examPart, 'part1_intro')
+})
+
+test('任务详情页听力做题：选择判分、确认下一题、末题结束', () => {
+  const def = loadPage('../pages/taskDetail/taskDetail.js')
+  const page = pageMock(def)
+  page.data.listening = {
+    questions: [
+      { number: 1, answer: 'A', options: ['A', 'B'] },
+      { number: 2, answer: 'B', options: ['A', 'B'] }
+    ]
+  }
+  def.selectOption.call(page, { currentTarget: { dataset: { value: 'A' } } })
+  assert.strictEqual(page.data.revealed[0], true)
+  assert.strictEqual(page.data.score, 1, '答对计分')
+  // 已判分的题不能再次改答案
+  def.selectOption.call(page, { currentTarget: { dataset: { value: 'B' } } })
+  assert.strictEqual(page.data.score, 1)
+  def.confirmNext.call(page)
+  assert.strictEqual(page.data.cursor, 1)
+
+  def.selectOption.call(page, { currentTarget: { dataset: { value: 'A' } } })
+  assert.strictEqual(page.data.score, 1, '答错不计分')
+  def.confirmNext.call(page)
+  assert.strictEqual(page.data.finished, true)
+  assert.strictEqual(page.data.score, 1)
+
+  def.restartListening.call(page)
+  assert.strictEqual(page.data.cursor, 0)
+  assert.strictEqual(page.data.score, 0)
+  assert.strictEqual(page.data.finished, false)
+})
+
+test('我的页：展示麦克风权限状态并可跳转设置', () => {
+  const def = loadPage('../pages/mine/mine.js')
+  const page = pageMock(def)
+  def.applyMicStatus.call(page, 'denied')
+  assert.strictEqual(page.data.micText, '已关闭')
+  assert.strictEqual(page.data.micActionText, '去设置')
+  def.applyMicStatus.call(page, 'unset')
+  assert.strictEqual(page.data.micText, '未授权')
+  assert.strictEqual(page.data.micActionText, '去授权')
+  def.applyMicStatus.call(page, 'granted')
+  assert.strictEqual(page.data.micText, '已开启')
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/mine/mine.wxml'), 'utf8')
+  assert.ok(wxml.indexOf('权限管理') >= 0)
+  assert.ok(wxml.indexOf('bindtap="onMicPermissionTap"') >= 0)
 })
 
 ;(async () => {

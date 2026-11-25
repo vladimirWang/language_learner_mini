@@ -120,6 +120,84 @@
   line-height: 1.5;
 }
 
+.option-selected {
+  background: #e6f4ff;
+}
+
+.option-correct {
+  background: #e8fff0;
+  color: #1f9d55;
+}
+
+.option-wrong {
+  background: #fff1f0;
+  color: #cf1322;
+}
+
+.feedback {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-top: 16rpx;
+  font-size: 26rpx;
+}
+
+.feedback .ok {
+  color: #1f9d55;
+}
+
+.feedback .bad {
+  color: #cf1322;
+}
+
+.confirm-bar {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 24rpx;
+}
+
+.confirm-bar button {
+  flex: 1;
+}
+
+.btn-primary,
+.btn-ghost {
+  border-radius: 14rpx;
+  font-size: 28rpx;
+  line-height: 2.4;
+}
+
+.btn-primary {
+  background: #1677ff;
+  color: #fff;
+}
+
+.btn-ghost {
+  background: #f0f2f5;
+  color: #1f2329;
+}
+
+.q-count {
+  font-size: 24rpx;
+  color: #8a8f99;
+}
+
+.result {
+  text-align: center;
+  padding: 48rpx 28rpx;
+}
+
+.result-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.result-score {
+  margin: 20rpx 0 32rpx;
+  font-size: 30rpx;
+  color: #1f9d55;
+}
+
 .q-toggle {
   margin-top: 20rpx;
   color: #0958d9;

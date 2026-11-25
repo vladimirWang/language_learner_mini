@@ -1,7 +1,9 @@
 const api = require('../../utils/api')
+const permissions = require('../../utils/permissions')
 
 // 测试详情：点击测试列表项进入，展示该测试关联的听力/口语任务（GET /api/tests/:id）。
-// 点击任务卡进入任务详情页；按项目约定不在小程序展示语种。
+// 听力任务进入任务页做题；口语任务进入人机对话页，进入前先校验麦克风权限。
+// 按项目约定不在小程序展示语种。
 const TYPE_LABELS = {
   listening: '听力',
   speaking: '口语',
@@ -14,6 +16,8 @@ Page({
     id: '',
     level: null,
     exams: [],
+    hasSpeaking: false,
+    micGranted: null,
     loading: true,
     error: ''
   },
@@ -28,6 +32,19 @@ Page({
 
   onPullDownRefresh() {
     this.load().finally(() => wx.stopPullDownRefresh())
+  },
+
+  onShow() {
+    this.refreshMicPermission()
+  },
+
+  refreshMicPermission() {
+    permissions.getMicPermission().then((status) => {
+      // null 表示尚未请求过，false 表示明确拒绝，true 表示已开启。
+      this.setData({
+        micGranted: status === 'granted' ? true : (status === 'denied' ? false : null)
+      })
+    })
   },
 
   async load() {
@@ -51,7 +68,9 @@ Page({
         }))
         .sort((a, b) => a.order - b.order)
       if (level && level.name) wx.setNavigationBarTitle({ title: level.name })
-      this.setData({ level: level, exams: exams })
+      const hasSpeaking = exams.some((item) => item.itemType.indexOf('speaking') === 0)
+      this.setData({ level: level, exams: exams, hasSpeaking: hasSpeaking })
+      this.refreshMicPermission()
     } catch (error) {
       this.setData({ error: (error && error.message) || '测试详情加载失败' })
     } finally {
@@ -63,15 +82,60 @@ Page({
     this.load()
   },
 
-  /** 进入任务内容页：由任务详情页按 item_type + exam_id 拉取听力/口语内容。 */
-  openTask(e) {
+  /** 进入任务：听力进入做题页；口语先校验麦克风权限，再进入人机对话页。 */
+  async openTask(e) {
     const dataset = e.currentTarget.dataset || {}
     if (!dataset.examId || !dataset.itemType) return
-    wx.navigateTo({
-      url: '/pages/taskDetail/taskDetail?levelId=' + encodeURIComponent(this.data.id) +
-        '&itemType=' + encodeURIComponent(dataset.itemType) +
-        '&examId=' + encodeURIComponent(dataset.examId) +
-        '&name=' + encodeURIComponent(dataset.name || '')
+    const isSpeaking = dataset.itemType.indexOf('speaking') === 0
+    if (!isSpeaking) {
+      this.navigateToTask(dataset, false)
+      return
+    }
+    const status = await permissions.ensureMicPermission()
+    if (status === 'granted') {
+      this.setData({ micGranted: true })
+      this.navigateToTask(dataset, true)
+      return
+    }
+    this.setData({ micGranted: false })
+    this.promptMicSetting(dataset)
+  },
+
+  /** 已拒绝授权时，只能引导到微信设置页重新开启。 */
+  promptMicSetting(dataset) {
+    wx.showModal({
+      title: '需要麦克风权限',
+      content: '口语测试需要麦克风才能开始，请在微信设置中开启后重试。',
+      confirmText: '去设置',
+      success: (res) => {
+        if (!res || !res.confirm) return
+        permissions.openMicSetting().then((granted) => {
+          this.setData({ micGranted: granted })
+          if (granted && dataset) this.navigateToTask(dataset, true)
+        })
+      }
     })
+  },
+
+  /** 详情页顶部权限提示的「去开启」按钮。 */
+  async onEnableMic() {
+    const status = await permissions.ensureMicPermission()
+    if (status === 'granted') {
+      this.setData({ micGranted: true })
+      return
+    }
+    this.setData({ micGranted: false })
+    this.promptMicSetting(null)
+  },
+
+  navigateToTask(dataset, isSpeaking) {
+    const difficulty = this.data.level && this.data.level.difficulty ? this.data.level.difficulty : ''
+    let url = (isSpeaking ? '/pages/speakingTask/speakingTask' : '/pages/taskDetail/taskDetail') +
+      '?levelId=' + encodeURIComponent(this.data.id) +
+      '&itemType=' + encodeURIComponent(dataset.itemType) +
+      '&examId=' + encodeURIComponent(dataset.examId) +
+      '&name=' + encodeURIComponent(dataset.name || '')
+    if (isSpeaking) url += '&level=' + encodeURIComponent(difficulty)
+    wx.navigateTo({ url: url })
   }
 })

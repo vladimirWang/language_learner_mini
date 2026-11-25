@@ -69,3 +69,29 @@
   color: #d4380d;
   margin-bottom: 16rpx;
 }
+
+.mic-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  border: 1rpx solid #ffe7ba;
+  background: #fffbe6;
+}
+
+.mic-tip-text {
+  flex: 1;
+  font-size: 26rpx;
+  color: #ad6800;
+  line-height: 1.5;
+}
+
+.mic-tip-btn {
+  flex: none;
+  margin: 0;
+  padding: 0 28rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  font-size: 26rpx;
+  border-radius: 32rpx;
+}

@@ -17,52 +17,76 @@
       <view class="muted summary-meta" wx:if="{{listening}}">共 {{listening.questionCount}} 题</view>
     </view>
 
-    <!-- 听力任务：逐题播放音频、题面图片，可按需查看原文与答案 -->
+    <!-- 听力任务：与关卡页一致的做题模式，一次一题，选择即判分 -->
     <block wx:if="{{listening}}">
       <view class="card empty" wx:if="{{listening.questions.length === 0}}">
         <view class="muted">该听力任务暂无题目</view>
       </view>
 
-      <view class="card question" wx:for="{{listening.questions}}" wx:key="number">
-        <view class="row">
-          <view class="q-title">第 {{item.number}} 题</view>
-          <view class="q-actions">
-            <view class="audio-btn {{playingIndex === index ? 'is-playing' : ''}}"
-                  data-index="{{index}}" bindtap="toggleAudio">
-              <text class="audio-icon">{{playingIndex === index ? '⏸' : '▶'}}</text>
+      <block wx:if="{{listening.questions.length}}">
+        <view class="card question" wx:if="{{!finished}}">
+          <view class="row">
+            <view class="q-title">第 {{listening.questions[cursor].number}} 题</view>
+            <view class="q-count">{{cursor + 1}} / {{listening.questions.length}}</view>
+          </view>
+
+          <listening-audio
+            wx:if="{{listening.questions[cursor].audioUrl}}"
+            playing="{{playingIndex === cursor}}"
+            paused="{{pausedIndex === cursor}}"
+            percent="{{audioPercent || 0}}"
+            progress="{{audioProgress}}"
+            error="{{audioErrorIndex === cursor}}"
+            seq="{{cursor}}"
+            bind:toggle="onAudioToggle"
+            bind:stop="onAudioStop"
+          />
+
+          <image wx:if="{{listening.questions[cursor].imageUrl}}" class="q-image"
+                 src="{{listening.questions[cursor].imageUrl}}" mode="widthFix"
+                 data-url="{{listening.questions[cursor].imageUrl}}" bindtap="previewImage" />
+
+          <view class="options" wx:if="{{listening.questions[cursor].options.length}}">
+            <view
+              wx:for="{{listening.questions[cursor].options}}"
+              wx:for-item="opt"
+              wx:key="*this"
+              data-value="{{opt}}"
+              bindtap="selectOption"
+              class="option {{answers[cursor] === opt ? 'option-selected' : ''}} {{revealed[cursor] && opt === listening.questions[cursor].answer ? 'option-correct' : ''}} {{revealed[cursor] && answers[cursor] === opt && opt !== listening.questions[cursor].answer ? 'option-wrong' : ''}}"
+            >{{opt}}</view>
+          </view>
+
+          <view class="feedback" wx:if="{{revealed[cursor]}}">
+            <text class="{{answers[cursor] === listening.questions[cursor].answer ? 'ok' : 'bad'}}">
+              {{answers[cursor] === listening.questions[cursor].answer ? '回答正确' : '回答错误'}}
+            </text>
+            <text class="muted">正确答案：{{listening.questions[cursor].answer || '暂无'}}</text>
+          </view>
+
+          <block wx:if="{{revealed[cursor]}}">
+            <view class="q-toggle" data-index="{{cursor}}" bindtap="toggleTranscript">
+              {{showTranscript[cursor] ? '收起原文' : '查看原文'}}
             </view>
-            <view class="audio-btn audio-stop"
-                  wx:if="{{playingIndex === index || pausedIndex === index}}"
-                  bindtap="stopAudioTap">
-              <text class="audio-icon">⏹</text>
+            <view class="q-transcript" wx:if="{{showTranscript[cursor]}}">
+              {{listening.questions[cursor].transcript || '暂无原文'}}
             </view>
+          </block>
+
+          <view class="confirm-bar">
+            <button class="btn-ghost" wx:if="{{!revealed[cursor]}}" bindtap="revealAnswer">看答案</button>
+            <button class="btn-primary" wx:if="{{revealed[cursor] || answers[cursor]}}" bindtap="confirmNext">
+              确认，{{cursor + 1 === listening.questions.length ? '提交' : '下一题'}}
+            </button>
           </view>
         </view>
 
-        <view class="audio-track" wx:if="{{playingIndex === index || pausedIndex === index}}">
-          <view class="audio-fill" style="width: {{audioPercent || 0}}%"></view>
+        <view class="card result" wx:else>
+          <view class="result-title">听力完成</view>
+          <view class="result-score">答对 {{score}} / {{listening.questions.length}}</view>
+          <button class="btn-primary" bindtap="restartListening">再练一次</button>
         </view>
-        <view class="muted audio-progress" wx:if="{{playingIndex === index || pausedIndex === index}}">{{audioProgress}}</view>
-        <view class="audio-error" wx:if="{{audioErrorIndex === index}}">音频加载失败，请重试</view>
-
-        <image wx:if="{{item.imageUrl}}" class="q-image" src="{{item.imageUrl}}" mode="widthFix"
-               data-url="{{item.imageUrl}}" bindtap="previewImage" />
-        <view class="options" wx:if="{{item.options.length}}">
-          <view class="option" wx:for="{{item.options}}" wx:for-item="opt" wx:key="*this">{{opt}}</view>
-        </view>
-
-        <view class="q-toggle" data-index="{{index}}" bindtap="toggleTranscript">
-          {{showTranscript[index] ? '收起原文' : '查看原文'}}
-        </view>
-        <view class="q-transcript" wx:if="{{showTranscript[index]}}">{{item.transcript || '暂无原文'}}</view>
-
-        <block wx:if="{{item.answer}}">
-          <view class="q-toggle" data-index="{{index}}" bindtap="toggleAnswer">
-            {{showAnswer[index] ? '收起答案' : '查看答案'}}
-          </view>
-          <view class="q-answer" wx:if="{{showAnswer[index]}}">{{item.answer}}</view>
-        </block>
-      </view>
+      </block>
     </block>
 
     <!-- 口语任务：单题 / 话题 / 方案 -->

@@ -1,0 +1,290 @@
+.page {
+  min-height: 100vh;
+  padding: 24rpx;
+  padding-bottom: calc(260rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background: #f5f6f8;
+  display: flex;
+  flex-direction: column;
+}
+
+.loading {
+  padding: 80rpx 0;
+  text-align: center;
+  color: #8a8f99;
+  font-size: 28rpx;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  box-shadow: 0 4rpx 18rpx rgba(17, 24, 39, 0.04);
+}
+
+.error-card {
+  margin-top: 40rpx;
+}
+
+.error {
+  color: #d4380d;
+  font-size: 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.head {
+  flex: none;
+}
+
+.head-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.head-meta {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 12rpx;
+  font-size: 26rpx;
+}
+
+.tag {
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  background: #eef3ff;
+  color: #2f6bff;
+  font-size: 22rpx;
+}
+
+.head-tip {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.chat {
+  flex: 1;
+  height: 0;
+  margin-top: 20rpx;
+}
+
+.chat-bottom {
+  height: 20rpx;
+}
+
+.msg-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 28rpx;
+  gap: 16rpx;
+}
+
+.msg-left {
+  flex-direction: row;
+}
+
+.msg-right {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  flex: none;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #fff;
+}
+
+.avatar.examiner {
+  background: #2f6bff;
+}
+
+.avatar.user {
+  background: #1f9d55;
+}
+
+.bubble-wrap {
+  max-width: 74%;
+  display: flex;
+  flex-direction: column;
+}
+
+.msg-right .bubble-wrap {
+  align-items: flex-end;
+}
+
+.bubble {
+  padding: 20rpx 24rpx;
+  border-radius: 20rpx;
+  font-size: 30rpx;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.bubble.examiner {
+  background: #fff;
+  color: #1f2329;
+  border-top-left-radius: 6rpx;
+}
+
+.bubble.user {
+  background: #2f6bff;
+  color: #fff;
+  border-top-right-radius: 6rpx;
+}
+
+.checking {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+}
+
+.grammar {
+  margin-top: 12rpx;
+  width: 100%;
+  background: #fffbe6;
+  border: 1rpx solid #ffe7ba;
+  border-radius: 14rpx;
+  padding: 16rpx 20rpx;
+  box-sizing: border-box;
+}
+
+.grammar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 24rpx;
+}
+
+.grammar-title {
+  color: #ad6800;
+  font-weight: 600;
+}
+
+.grammar-body {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #613400;
+  line-height: 1.7;
+}
+
+.grammar-line {
+  margin-top: 8rpx;
+}
+
+.grammar-type {
+  color: #ad6800;
+}
+
+.grammar-wrong {
+  color: #cf1322;
+  text-decoration: line-through;
+}
+
+.muted {
+  color: #8a8f99;
+}
+
+.summary {
+  margin-top: 12rpx;
+}
+
+.summary-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+  margin-bottom: 16rpx;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10rpx 0;
+  font-size: 28rpx;
+}
+
+.summary-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 24rpx;
+}
+
+.summary-actions button {
+  flex: 1;
+}
+
+.panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -6rpx 24rpx rgba(17, 24, 39, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.panel-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  font-size: 26rpx;
+  color: #4b5563;
+}
+
+.pulse {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: #f5222d;
+  animation: mic-pulse 1s infinite;
+}
+
+@keyframes mic-pulse {
+  0% { opacity: 0.35; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.panel-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
+.panel-hint {
+  font-size: 24rpx;
+}
+
+.btn-primary,
+.btn-ghost {
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  line-height: 2.4;
+}
+
+.btn-primary {
+  background: #2f6bff;
+  color: #fff;
+}
+
+.btn-ghost {
+  background: #f0f2f5;
+  color: #1f2329;
+}
+
+.round {
+  padding: 0 32rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 36rpx;
+}

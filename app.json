@@ -5,6 +5,7 @@
     "pages/tests/tests",
     "pages/testDetail/testDetail",
     "pages/taskDetail/taskDetail",
+    "pages/speakingTask/speakingTask",
     "pages/mine/mine"
   ],
   "window": {

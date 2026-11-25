@@ -18,6 +18,11 @@
       <view class="description" wx:if="{{level.description}}">{{level.description}}</view>
     </view>
 
+    <view class="card mic-tip" wx:if="{{hasSpeaking && micGranted !== true}}">
+      <view class="mic-tip-text">口语任务需要麦克风权限{{micGranted === false ? '（当前已关闭）' : ''}}</view>
+      <button class="btn-primary mic-tip-btn" bindtap="onEnableMic">去开启</button>
+    </view>
+
     <view class="section-title">关联任务</view>
 
     <view class="card empty" wx:if="{{exams.length === 0}}">
