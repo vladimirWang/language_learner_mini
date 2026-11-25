@@ -4,6 +4,7 @@
     "pages/calendar/calendar",
     "pages/tests/tests",
     "pages/testDetail/testDetail",
+    "pages/taskDetail/taskDetail",
     "pages/mine/mine"
   ],
   "window": {

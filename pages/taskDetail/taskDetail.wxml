@@ -1,0 +1,96 @@
+<view class="page">
+  <view class="card" wx:if="{{loading}}">
+    <view class="muted">加载中…</view>
+  </view>
+
+  <view class="card" wx:elif="{{error}}">
+    <view class="error">{{error}}</view>
+    <button class="btn-primary" bindtap="retry">重试</button>
+  </view>
+
+  <block wx:else>
+    <view class="card summary">
+      <view class="row">
+        <view class="task-title">{{title}}</view>
+        <view class="tag">{{typeLabel}}</view>
+      </view>
+      <view class="muted summary-meta" wx:if="{{listening}}">共 {{listening.questionCount}} 题</view>
+    </view>
+
+    <!-- 听力任务：逐题播放音频、题面图片，可按需查看原文与答案 -->
+    <block wx:if="{{listening}}">
+      <view class="card empty" wx:if="{{listening.questions.length === 0}}">
+        <view class="muted">该听力任务暂无题目</view>
+      </view>
+
+      <view class="card question" wx:for="{{listening.questions}}" wx:key="number">
+        <view class="row">
+          <view class="q-title">第 {{item.number}} 题</view>
+          <view class="q-actions">
+            <view class="audio-btn {{playingIndex === index ? 'is-playing' : ''}}"
+                  data-index="{{index}}" bindtap="toggleAudio">
+              <text class="audio-icon">{{playingIndex === index ? '⏸' : '▶'}}</text>
+            </view>
+            <view class="audio-btn audio-stop"
+                  wx:if="{{playingIndex === index || pausedIndex === index}}"
+                  bindtap="stopAudioTap">
+              <text class="audio-icon">⏹</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="audio-track" wx:if="{{playingIndex === index || pausedIndex === index}}">
+          <view class="audio-fill" style="width: {{audioPercent || 0}}%"></view>
+        </view>
+        <view class="muted audio-progress" wx:if="{{playingIndex === index || pausedIndex === index}}">{{audioProgress}}</view>
+        <view class="audio-error" wx:if="{{audioErrorIndex === index}}">音频加载失败，请重试</view>
+
+        <image wx:if="{{item.imageUrl}}" class="q-image" src="{{item.imageUrl}}" mode="widthFix"
+               data-url="{{item.imageUrl}}" bindtap="previewImage" />
+        <view class="options" wx:if="{{item.options.length}}">
+          <view class="option" wx:for="{{item.options}}" wx:for-item="opt" wx:key="*this">{{opt}}</view>
+        </view>
+
+        <view class="q-toggle" data-index="{{index}}" bindtap="toggleTranscript">
+          {{showTranscript[index] ? '收起原文' : '查看原文'}}
+        </view>
+        <view class="q-transcript" wx:if="{{showTranscript[index]}}">{{item.transcript || '暂无原文'}}</view>
+
+        <block wx:if="{{item.answer}}">
+          <view class="q-toggle" data-index="{{index}}" bindtap="toggleAnswer">
+            {{showAnswer[index] ? '收起答案' : '查看答案'}}
+          </view>
+          <view class="q-answer" wx:if="{{showAnswer[index]}}">{{item.answer}}</view>
+        </block>
+      </view>
+    </block>
+
+    <!-- 口语任务：单题 / 话题 / 方案 -->
+    <block wx:if="{{speaking}}">
+      <view class="card plan" wx:if="{{speaking.plan}}">
+        <view class="plan-name">{{speaking.plan.name}}</view>
+        <view class="muted plan-description" wx:if="{{speaking.plan.description}}">{{speaking.plan.description}}</view>
+      </view>
+
+      <view class="card empty" wx:if="{{speaking.items.length === 0}}">
+        <view class="muted">暂无口语题目</view>
+      </view>
+
+      <view class="card question" wx:for="{{speaking.items}}" wx:key="key">
+        <view class="q-title">{{index + 1}}. {{item.topic || '口语练习'}}</view>
+        <view class="prompt-de">{{item.promptDe}}</view>
+        <view class="muted prompt-zh" wx:if="{{item.promptZh}}">{{item.promptZh}}</view>
+        <view class="points" wx:if="{{item.expectedPoints}}">答题要点：{{item.expectedPoints}}</view>
+
+        <block wx:if="{{item.refAnswer}}">
+          <view class="q-toggle" data-index="{{index}}" bindtap="toggleAnswer">
+            {{showAnswer[index] ? '收起参考答案' : '查看参考答案'}}
+          </view>
+          <view class="q-answer" wx:if="{{showAnswer[index]}}">{{item.refAnswer}}</view>
+        </block>
+
+        <view class="error-note" wx:if="{{item.errorNote}}">易错点：{{item.errorNote}}</view>
+      </view>
+    </block>
+  </block>
+</view>

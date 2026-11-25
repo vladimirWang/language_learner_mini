@@ -32,9 +32,21 @@
   font-weight: 500;
 }
 
-.exam-meta {
-  margin-top: 10rpx;
-  font-size: 24rpx;
+.exam-right {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex: none;
+}
+
+.exam-item-hover {
+  background: #f2f4f7;
+}
+
+.chevron {
+  color: #c0c6d1;
+  font-size: 34rpx;
+  line-height: 1;
 }
 
 .tag {

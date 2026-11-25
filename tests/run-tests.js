@@ -229,13 +229,14 @@ test('全局 store：初始状态、setUser/setLevel 不保存隐私字段、订
   assert.strictEqual(session.getState().level, 'A1')
 })
 
-test('app.json 注册五页、三 Tab，calendar/testDetail 为二级页，tests 目录不进包', () => {
+test('app.json 注册六页、三 Tab，calendar/testDetail/taskDetail 为二级页，tests 目录不进包', () => {
   const app = JSON.parse(fs.readFileSync(path.join(__dirname, '../app.json'), 'utf8'))
   assert.deepStrictEqual(app.pages, [
     'pages/levels/levels',
     'pages/calendar/calendar',
     'pages/tests/tests',
     'pages/testDetail/testDetail',
+    'pages/taskDetail/taskDetail',
     'pages/mine/mine'
   ])
   assert.deepStrictEqual(app.tabBar.list.map((item) => item.pagePath), [
@@ -244,7 +245,7 @@ test('app.json 注册五页、三 Tab，calendar/testDetail 为二级页，tests
   const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../project.config.json'), 'utf8'))
   assert.ok(config.packOptions.ignore.some((item) => item.type === 'folder' && item.value === 'tests'))
   const pagesDir = fs.readdirSync(path.join(__dirname, '../pages'))
-  assert.deepStrictEqual(pagesDir.sort(), ['calendar', 'levels', 'mine', 'testDetail', 'tests'])
+  assert.deepStrictEqual(pagesDir.sort(), ['calendar', 'levels', 'mine', 'taskDetail', 'testDetail', 'tests'])
 })
 
 // ---- 同步用例：关卡纯逻辑（新契约）----
@@ -395,6 +396,22 @@ test('A-06 已完成关结算面板只展示星数与答对题数，页面无冗
   assert.ok(wxml.indexOf('result.stars') >= 0, '展示服务端 stars')
   assert.ok(wxml.indexOf('答对 {{levelState[challenge.id].result.score}}/{{levelState[challenge.id].result.total}}') >= 0, '展示答对 n/m')
   assert.ok(wxml.indexOf('查看题目') >= 0 && wxml.indexOf('再答一次') >= 0, '保留回顾与重考入口')
+})
+
+test('结算面板样式：饱和星形图标、查看题目在答对题数下、底部仅两个按钮', () => {
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(__dirname, '../pages/levels/levels.wxss'), 'utf8')
+  assert.ok(wxml.indexOf('class="star-icon') >= 0 && wxml.indexOf('★') >= 0, '星数用星形图标')
+  assert.ok(wxss.indexOf('.star-icon.filled') >= 0 && wxss.indexOf('#ff9500') >= 0, '已获星图标为饱和色')
+  const scorePos = wxml.indexOf('result.score')
+  const reviewPos = wxml.indexOf('bindtap="openReview"')
+  const actionsPos = wxml.indexOf('class="result-actions"')
+  assert.ok(scorePos > 0 && reviewPos > scorePos && reviewPos < actionsPos, '查看题目紧跟答对题数且在按钮区之前')
+  const actions = wxml.slice(actionsPos, wxml.indexOf('<!-- 层叠卡片堆', actionsPos))
+  assert.ok(actions.indexOf('retryLevel') >= 0 && actions.indexOf('goNext') >= 0, '底部保留再答一次与下一题')
+  assert.strictEqual(actions.indexOf('openReview'), -1, '底部不再放查看题目')
+  assert.ok(wxml.indexOf('下一题') >= 0 && wxml.indexOf('下一关') === -1, '按钮文案为下一题')
+  assert.ok(wxss.indexOf('.result-actions') >= 0 && wxss.indexOf('width: 100%') >= 0, '按钮区占满宽度，不再溢出')
 })
 
 // ---- 同步用例：日历 buildCells（新签名 days）----
@@ -945,6 +962,7 @@ atest('测试页移除说明卡片，点击列表项跳转测试详情', async (
   assert.ok(wxml.indexOf('<view class="title">测试配置</view>') === -1, '不应展示测试配置标题')
   assert.ok(wxml.indexOf('以下为管理端配置') === -1, '不应展示管理端说明')
   assert.ok(wxml.indexOf('bindtap="openDetail"') >= 0, '列表项应绑定 openDetail')
+  assert.ok(wxml.indexOf('item.lang') === -1, '按约定不在小程序展示语种')
   def.openDetail.call(page, { currentTarget: { dataset: { id: 2, name: 'a1 听力' } } })
   assert.strictEqual(navigateCalls.length, 1)
   assert.strictEqual(navigateCalls[0].url,
@@ -970,7 +988,30 @@ atest('测试详情页按 id 拉取 /api/tests/:id 并按 sort_order 展示任�
   assert.strictEqual(page.data.exams.length, 2)
   assert.strictEqual(page.data.exams[0].name, 'e1', '无名称时回退 exam_id')
   assert.strictEqual(page.data.exams[0].typeLabel, '听力')
+  assert.strictEqual(page.data.exams[0].itemType, 'listening')
+  assert.strictEqual(page.data.exams[0].examId, 'e1')
   assert.strictEqual(page.data.exams[1].typeLabel, '口语')
+})
+
+atest('测试详情页任务卡可点击进入任务详情，且不展示语种', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_TESTS')
+  const def = loadPage('../pages/testDetail/testDetail.js')
+  const page = pageMock(def)
+  page.data.id = '7'
+  const wxml = fs.readFileSync(path.join(__dirname, '../pages/testDetail/testDetail.wxml'), 'utf8')
+  assert.ok(wxml.indexOf('bindtap="openTask"') >= 0, '任务卡应绑定 openTask')
+  assert.ok(wxml.indexOf('exam-meta') === -1, '不应展示任务卡语种')
+  assert.ok(wxml.indexOf('level.lang') === -1, '摘要不应展示语种')
+  def.openTask.call(page, {
+    currentTarget: {
+      dataset: { examId: 'e1', itemType: 'listening', name: 'a1 听力' }
+    }
+  })
+  assert.strictEqual(navigateCalls.length, 1)
+  assert.strictEqual(navigateCalls[0].url,
+    '/pages/taskDetail/taskDetail?levelId=7&itemType=listening&examId=e1&name=' +
+    encodeURIComponent('a1 听力'))
 })
 
 atest('测试详情页 onLoad 写入 id 并用名称设置标题', async () => {
@@ -992,6 +1033,101 @@ atest('测试详情页缺少 id 时提示且不发起请求', async () => {
   await def.load.call(page)
   assert.strictEqual(page.data.loading, false)
   assert.strictEqual(page.data.error, '测试参数缺失')
+  assert.strictEqual(capturedRequests.length, 0)
+})
+
+atest('任务详情页拉取听力内容并把素材路径补成完整地址', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_TESTS')
+  const def = loadPage('../pages/taskDetail/taskDetail.js')
+  const page = pageMock(def)
+  page.data.levelId = '7'
+  page.data.itemType = 'listening'
+  page.data.examId = 'e1'
+  requestQueue.push({ statusCode: 200, data: {
+    item_type: 'listening',
+    exam_id: 'e1',
+    title: '听力一',
+    listening: {
+      duration: 12.5,
+      question_count: 1,
+      questions: [{
+        number: 1,
+        duration: 6,
+        audio_url: '/api/tests/7/items/listening/e1/asset?path=audio%2Fq01.m4a',
+        image_url: '/api/tests/7/items/listening/e1/asset?path=images%2Fq01.jpg',
+        transcript: 'Hallo',
+        answer: 'A',
+        options: ['A', 'B']
+      }]
+    }
+  } })
+  await def.load.call(page)
+  assert.strictEqual(capturedRequests[capturedRequests.length - 1].url,
+    api.BASE_URL + '/api/tests/7/items/listening/e1')
+  assert.strictEqual(page.data.title, '听力一')
+  assert.strictEqual(page.data.typeLabel, '听力')
+  assert.strictEqual(page.data.listening.questions.length, 1)
+  assert.strictEqual(page.data.listening.questions[0].audioUrl,
+    api.BASE_URL + '/api/tests/7/items/listening/e1/asset?path=audio%2Fq01.m4a')
+  assert.strictEqual(page.data.listening.questions[0].duration, 6)
+})
+
+atest('任务详情页拉取口语方案并映射题目字段', async () => {
+  reset()
+  wx.setStorageSync('wx_token', 'TOKEN_TESTS')
+  const def = loadPage('../pages/taskDetail/taskDetail.js')
+  const page = pageMock(def)
+  page.data.levelId = '7'
+  page.data.itemType = 'speaking_plan'
+  page.data.examId = '12'
+  requestQueue.push({ statusCode: 200, data: {
+    item_type: 'speaking_plan',
+    exam_id: '12',
+    title: '口语方案',
+    speaking: {
+      plan: { id: 12, name: '口语方案', description: '自我介绍' },
+      items: [{
+        item_key: 'k1', topic: '自我介绍', prompt_de: 'Stellen Sie sich vor.',
+        prompt_zh: '请介绍自己。', expected_points: '姓名/职业', ref_answer: 'Ich heiße ...',
+        error_note: '注意语序', sort_order: 1
+      }]
+    }
+  } })
+  await def.load.call(page)
+  assert.strictEqual(page.data.title, '口语方案')
+  assert.strictEqual(page.data.typeLabel, '口语计划')
+  assert.strictEqual(page.data.speaking.plan.name, '口语方案')
+  assert.strictEqual(page.data.speaking.items[0].promptDe, 'Stellen Sie sich vor.')
+  assert.strictEqual(page.data.speaking.items[0].refAnswer, 'Ich heiße ...')
+})
+
+atest('任务详情页音频支持播放、暂停与停止', async () => {
+  reset()
+  const def = loadPage('../pages/taskDetail/taskDetail.js')
+  const page = pageMock(def)
+  page.data.listening = {
+    questions: [{ number: 1, audioUrl: 'https://cdn.example.com/a.m4a', duration: 10 }]
+  }
+  def.toggleAudio.call(page, { currentTarget: { dataset: { index: 0 } } })
+  assert.strictEqual(audioContexts.length, 1)
+  assert.strictEqual(page.data.playingIndex, 0)
+  def.toggleAudio.call(page, { currentTarget: { dataset: { index: 0 } } })
+  assert.strictEqual(page.data.playingIndex, -1)
+  assert.strictEqual(page.data.pausedIndex, 0)
+  def.stopAudioTap.call(page)
+  assert.strictEqual(page.data.playingIndex, -1)
+  assert.strictEqual(page.data.pausedIndex, -1)
+  assert.strictEqual(page.audio, null)
+})
+
+atest('任务详情页缺少参数时提示且不发起请求', async () => {
+  reset()
+  const def = loadPage('../pages/taskDetail/taskDetail.js')
+  const page = pageMock(def)
+  await def.load.call(page)
+  assert.strictEqual(page.data.loading, false)
+  assert.strictEqual(page.data.error, '任务参数缺失')
   assert.strictEqual(capturedRequests.length, 0)
 })
 

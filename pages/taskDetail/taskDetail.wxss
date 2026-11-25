@@ -1,0 +1,172 @@
+.page {
+  padding-bottom: 40rpx;
+}
+
+.task-title {
+  flex: 1;
+  margin-right: 16rpx;
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.summary-meta {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+}
+
+.tag {
+  flex: none;
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  background: #eef5ff;
+  color: #0958d9;
+  font-size: 24rpx;
+}
+
+.plan-name {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.plan-description {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+.question .q-title {
+  flex: 1;
+  margin-right: 16rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.q-actions {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex: none;
+}
+
+.audio-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: #eef5ff;
+  color: #0958d9;
+}
+
+.audio-btn.is-playing {
+  background: #1677ff;
+  color: #fff;
+}
+
+.audio-stop {
+  background: #f2f4f7;
+  color: #4e5969;
+}
+
+.audio-icon {
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+.audio-track {
+  position: relative;
+  height: 8rpx;
+  margin-top: 20rpx;
+  border-radius: 4rpx;
+  background: #eef0f4;
+  overflow: hidden;
+}
+
+.audio-fill {
+  height: 100%;
+  border-radius: 4rpx;
+  background: #1677ff;
+  transition: width 0.2s linear;
+}
+
+.audio-progress {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+}
+
+.audio-error {
+  margin-top: 12rpx;
+  color: #d4380d;
+  font-size: 24rpx;
+}
+
+.q-image {
+  width: 100%;
+  margin-top: 20rpx;
+  border-radius: 12rpx;
+}
+
+.options {
+  margin-top: 16rpx;
+}
+
+.option {
+  padding: 12rpx 16rpx;
+  margin-top: 10rpx;
+  border-radius: 10rpx;
+  background: #f6f7f9;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+.q-toggle {
+  margin-top: 20rpx;
+  color: #0958d9;
+  font-size: 26rpx;
+}
+
+.q-transcript,
+.q-answer {
+  margin-top: 12rpx;
+  padding: 16rpx;
+  border-radius: 10rpx;
+  background: #f6f7f9;
+  font-size: 26rpx;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.prompt-de {
+  margin-top: 16rpx;
+  font-size: 30rpx;
+  line-height: 1.6;
+}
+
+.prompt-zh {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.points {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  border-radius: 10rpx;
+  background: #f0f9eb;
+  color: #3f6600;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+.error-note {
+  margin-top: 12rpx;
+  color: #ad6800;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.error {
+  color: #d4380d;
+  margin-bottom: 16rpx;
+}

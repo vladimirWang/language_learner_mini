@@ -27,7 +27,6 @@
       </view>
       <view class="meta">
         <text class="tag">{{item.difficulty}}</text>
-        <text class="muted">{{item.lang}}</text>
       </view>
       <view class="description">{{item.description || '暂无描述'}}</view>
     </view>

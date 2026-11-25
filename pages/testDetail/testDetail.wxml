@@ -14,7 +14,7 @@
         <view class="level-name">{{level.name}}</view>
         <view class="tag">{{level.difficulty}}</view>
       </view>
-      <view class="muted summary-meta">{{level.lang}} · {{exams.length}} 个任务</view>
+      <view class="muted summary-meta">{{exams.length}} 个任务</view>
       <view class="description" wx:if="{{level.description}}">{{level.description}}</view>
     </view>
 
@@ -25,12 +25,16 @@
       <view class="muted">该测试还没有配置听力或口语内容</view>
     </view>
 
-    <view class="card exam-item" wx:for="{{exams}}" wx:key="key">
+    <view class="card exam-item" wx:for="{{exams}}" wx:key="key" hover-class="exam-item-hover"
+          data-exam-id="{{item.examId}}" data-item-type="{{item.itemType}}" data-name="{{item.name}}"
+          bindtap="openTask">
       <view class="row">
         <view class="exam-name">{{item.name}}</view>
-        <view class="tag">{{item.typeLabel}}</view>
+        <view class="exam-right">
+          <view class="tag">{{item.typeLabel}}</view>
+          <text class="chevron">›</text>
+        </view>
       </view>
-      <view class="muted exam-meta" wx:if="{{item.lang}}">{{item.lang}}</view>
     </view>
   </block>
 </view>
