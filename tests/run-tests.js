@@ -138,6 +138,8 @@ function pathSet(obj, keyPath, value) {
 
 function pageMock(definition, extra) {
   return Object.assign({}, definition, {
+    // 页面加载后首次 load 应定位 progress.current（对应真实 onLoad 里的 _needPosition=true）
+    _needPosition: true,
     data: JSON.parse(JSON.stringify(definition.data)),
     setData(update) {
       Object.keys(update).forEach((k) => {
@@ -329,6 +331,28 @@ test('音频播放器：播放/暂停图标、进度文本与进度条由 InnerA
   assert.ok(wxss.indexOf('.audio-dot') >= 0 && wxss.indexOf('border-radius: 50%') >= 0)
   assert.ok(wxml.indexOf('question-image') >= 0 && wxml.indexOf('current.imageUrl') >= 0)
   assert.ok(wxss.indexOf('.question-image') >= 0)
+})
+
+test('A-05 resolveIndex：首次定位当前关，二次 load 保留浏览位置，浏览关消失才回退', () => {
+  const def = loadPage('../pages/levels/levels.js')
+  const list = [{ id: 10 }, { id: 11 }, { id: 12 }, { id: 13 }]
+  const page = pageMock(def, { _needPosition: true, data: Object.assign({}, def.data, { currentIndex: 0 }) })
+  page.data.challenges = list
+  // 首次进入：定位 progress.current(第 3 关)
+  assert.strictEqual(def.resolveIndex.call(page, list, 3), 2)
+  assert.strictEqual(page._needPosition, false)
+  // 滑到已完成第 1 关后 onShow → load 再拉序列：保持第 1 关，不弹回第 3 关
+  page.data.currentIndex = 0
+  assert.strictEqual(def.resolveIndex.call(page, list, 3), 0)
+  // 结算后序列刷新仍保持浏览位置
+  assert.strictEqual(def.resolveIndex.call(page, list, 3), 0)
+  // 浏览关被新序列移除：回退到当前关一次
+  const shorter = [{ id: 10 }, { id: 11 }, { id: 13 }]
+  page.data.currentIndex = 2 // 原第 3 关 id=12，新序列里已不存在
+  assert.strictEqual(def.resolveIndex.call(page, shorter, 2), 1)
+  // 切换等级重置标志后重新定位
+  page._needPosition = true
+  assert.strictEqual(def.resolveIndex.call(page, list, 4), 3)
 })
 
 test('答题反馈：展示你的答案/正确答案，听力题不展示转写原文', () => {

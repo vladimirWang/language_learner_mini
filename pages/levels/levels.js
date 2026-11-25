@@ -163,10 +163,13 @@ Page({
     const state = session.getState()
     this.setData({ lang: state.lang, level: state.level })
     this._timers = []
+    // 仅首次进入 / 切换等级时把浏览位置定位到 progress.current；普通 onShow 保持用户当前浏览关。
+    this._needPosition = true
     this.unsubscribe = session.subscribe((next) => {
       if (next.level !== this.data.level) {
         this.clearTimers()
         this.stopAudio()
+        this._needPosition = true
         this.setData({ levelState: {}, reviewing: null }, () => this.load())
       }
     })
@@ -210,7 +213,7 @@ Page({
     return this.data.levelState[id] || null
   },
 
-  /** 拉序列（§6.1）；refresh 时清空按关缓存。首次定位 progress.current。 */
+  /** 拉序列（§6.1）；refresh 时清空按关缓存。首次/切等级定位 progress.current，其余保留浏览位置。 */
   async load(refresh) {
     this.setData({ loading: true, error: '' })
     if (refresh === true) this.setData({ levelState: {}, reviewing: null })
@@ -221,7 +224,7 @@ Page({
       const challenges = (data && data.challenges) || []
       const progress = (data && data.progress) || { total: challenges.length, passed: 0, current: 1 }
       const current = Math.max(1, Number(progress.current) || 1)
-      const index = Math.min(challenges.length - 1, current - 1)
+      const currentIndex = this.resolveIndex(challenges, current)
       this.setData({
         lang: lang,
         level: (data && data.level) || session.getState().level,
@@ -233,14 +236,40 @@ Page({
         },
         streak: (data && data.streak) || this.data.streak,
         challenges: challenges,
-        currentIndex: Math.max(0, index)
+        currentIndex: currentIndex
       })
-      if (challenges.length) this.ensureLoaded(Math.max(0, index))
+      if (challenges.length) this.ensureLoaded(currentIndex)
     } catch (error) {
       this.setData({ error: (error && error.message) || '关卡加载失败' })
     } finally {
       this.setData({ loading: false })
     }
+  },
+
+  /**
+   * 计算应展示的 slide 下标（§7.1.1 / §7.1.2 / §7.1.8）。
+   * 首次进入或切换等级 → progress.current；其余情况按当前浏览关 id 找回原位，
+   * 避免 onShow/下拉刷新把用户从已完成的关卡弹回当前关。找不到该 id 才回退到当前关。
+   */
+  resolveIndex(challenges, current) {
+    const list = challenges || []
+    const fallback = Math.max(0, Math.min(list.length - 1, current - 1))
+    if (this._needPosition !== true) {
+      // 用旧序列定位用户正在看的关卡 id，再到新序列里找回原位
+      const previous = this.data.challenges || []
+      const viewing = previous[this.data.currentIndex]
+      if (viewing) {
+        const found = indexById(list, viewing.id)
+        if (found >= 0) {
+          this._needPosition = false
+          return found
+        }
+      }
+      // 浏览关已不在新序列中，回退一次并重新以当前关为基准
+      this._needPosition = true
+    }
+    this._needPosition = false
+    return fallback
   },
 
   /** 仅加载当前 slide；锁定关不请求详情（§7.1.1 / §7.1.2）。 */
